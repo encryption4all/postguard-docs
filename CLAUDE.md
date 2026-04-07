@@ -2,6 +2,22 @@
 
 VitePress documentation site. Run `npm run docs:dev` to preview locally.
 
+## Code Snippets
+
+Code examples in the docs must come from real, working code. Do not invent example code.
+
+Snippets are pulled from source repos using VitePress code snippet imports. The `npm run snippets` script (runs automatically before `docs:dev` and `docs:build`) clones three repos into `docs/snippets/`:
+
+- `postguard-examples` (SvelteKit web app example)
+- `postguard-tb-addon` (Thunderbird addon)
+- `postguard-outlook-addon` (Outlook addon)
+
+Use VitePress snippet syntax to include code: `<<< @/snippets/postguard-examples/pg-sveltekit/src/lib/postguard/encryption.ts`
+
+Line ranges are supported: `<<< @/snippets/postguard-tb-addon/src/background/background.ts{65-206 ts}`
+
+If a referenced file is renamed or deleted, the build will fail. This is intentional: it prevents stale snippets.
+
 ## Writing Style Rules
 
 All written content in this project must sound like a competent human wrote it. Follow these rules strictly when writing or editing any prose (markdown, comments, UI copy).

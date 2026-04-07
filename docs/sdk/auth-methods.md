@@ -12,17 +12,11 @@ PostGuard requires the sender to prove their identity before encrypting. The SDK
 
 ## API Key
 
-The simplest method. Uses a pre-shared API key (prefixed with `PG-API-`) to authenticate with the PKG. Suitable for server-side applications or trusted client environments where you don't need interactive identity verification.
+Uses a pre-shared API key (prefixed with `PG-API-`) to authenticate with the PKG. Suitable for server-side applications or trusted client environments where you don't need interactive identity verification.
 
-```ts
-const sign = pg.sign.apiKey('PG-API-your-key-here')
+The SvelteKit example uses an API key for encryption:
 
-await pg.encrypt({
-  sign,
-  recipients: [pg.recipient.email('alice@example.com')],
-  data: plaintext,
-})
-```
+<<< @/snippets/postguard-examples/pg-sveltekit/src/lib/postguard/encryption.ts{17-32 ts}
 
 The SDK sends the API key as a `Bearer` token in the `Authorization` header when requesting signing keys from the PKG at `POST /v2/irma/sign/key`.
 
@@ -30,30 +24,13 @@ The SDK sends the API key as a `Bearer` token in the `Authorization` header when
 API keys are part of PostGuard for Business. Contact your PKG administrator to obtain one.
 :::
 
-### When to use
-
-- Backend services that send encrypted emails or files
-- Automated workflows
-- Environments where Yivi is not available
-- Development and testing
-
 ## Yivi Web
 
 Runs an interactive Yivi session directly in the browser. The SDK renders a QR code (or app link on mobile) in the specified DOM element. The user scans it with the Yivi app to prove their email address.
 
-```ts
-const sign = pg.sign.yivi({
-  element: '#yivi-qr',
-  senderEmail: 'sender@example.com',
-  includeSender: true,            // optional: include sender as recipient
-})
+The SvelteKit download page uses the `element` parameter for Yivi-based decryption:
 
-await pg.encryptAndUpload({
-  sign,
-  recipients: [pg.recipient.email('alice@example.com')],
-  files: myFiles,
-})
-```
+<<< @/snippets/postguard-examples/pg-sveltekit/src/routes/download/+page.svelte{44-49 ts}
 
 ### Requirements
 
@@ -65,20 +42,6 @@ npm install @privacybydesign/yivi-core @privacybydesign/yivi-client @privacybyde
 
 If they are not installed, the SDK throws a `YiviNotInstalledError` when you try to use this method.
 
-### DOM element
-
-The `element` parameter is a CSS selector pointing to a container where the Yivi QR code will be rendered:
-
-```html
-<div id="yivi-qr"></div>
-```
-
-```ts
-pg.sign.yivi({ element: '#yivi-qr', senderEmail: 'sender@example.com' })
-```
-
-The container should have at least 300px height to display the QR code properly.
-
 ### Parameters
 
 | Parameter | Type | Required | Description |
@@ -87,131 +50,36 @@ The container should have at least 300px height to display the QR code properly.
 | `senderEmail` | `string` | Yes | The sender's email address to prove |
 | `includeSender` | `boolean` | No | Also encrypt for the sender (default: `false`) |
 
-### When to use
-
-- Web applications where the user is present in the browser
-- SvelteKit, Next.js, or other frontend frameworks
-- Any environment where you can render a DOM element for the QR code
-
 ## Session Callback
 
 The most flexible method. You provide a callback function that receives a session request and must return a JWT string. This lets you handle the Yivi session yourself: in a popup window, a separate process, or any custom flow.
 
-```ts
-const sign = pg.sign.session(
-  async (request) => {
-    // request.con  -- attributes to prove, e.g.:
-    //   [{ t: 'pbdf.sidn-pbdf.email.email', v: 'sender@example.com' }]
-    // request.sort -- 'Signing'
+The Thunderbird addon uses this for both encryption and decryption. For encryption, the session callback opens a Yivi popup:
 
-    const jwt = await myCustomYiviFlow(request)
-    return jwt
-  },
-  { senderEmail: 'sender@example.com' }
-)
-```
+<<< @/snippets/postguard-tb-addon/src/background/background.ts{388-396 ts}
 
-### The `SessionRequest` object
+For decryption:
 
-```ts
-interface SessionRequest {
-  con: { t: string; v?: string }[]  // required attribute constraints
-  sort: 'Signing' | 'Decryption'   // what the session is for
-  hints?: { t: string; v?: string }[] // display hints (decryption only)
-  senderId?: string                 // sender identifier (decryption only)
-}
-```
+<<< @/snippets/postguard-tb-addon/src/background/background.ts{727-738 ts}
 
-### Browser extension pattern
+The `createYiviPopup` function opens a browser popup and resolves with the JWT when the Yivi session completes:
 
-In a Thunderbird or Outlook extension, you typically open a popup window to show the Yivi QR code, then resolve the promise when the popup returns the JWT:
+<<< @/snippets/postguard-tb-addon/src/background/background.ts{608-658 ts}
 
-```ts
-const sign = pg.sign.session(
-  async (request) => {
-    return new Promise((resolve, reject) => {
-      const popup = window.open('/yivi-popup.html')
+### The popup page
 
-      window.addEventListener('message', (event) => {
-        if (event.data.type === 'yivi-jwt') {
-          resolve(event.data.jwt)
-        } else if (event.data.type === 'yivi-error') {
-          reject(new Error(event.data.error))
-        }
-      }, { once: true })
+The popup uses the SDK's `runYiviSession()` utility to handle the full Yivi flow:
 
-      popup.postMessage({ type: 'yivi-request', request })
-    })
-  },
-  { senderEmail: 'sender@example.com' }
-)
-```
+<<< @/snippets/postguard-tb-addon/src/pages/yivi-popup/yivi-popup.ts
 
-### Thunderbird extension pattern
+### Outlook dialog pattern
 
-The Thunderbird addon uses `browser.windows.create()` to open a popup and `browser.runtime.sendMessage()` to exchange data:
+The Outlook addon uses `Office.context.ui.displayDialogAsync()` instead of `browser.windows.create()`:
 
-```ts
-// Background script
-const sign = pg.sign.session(
-  async ({ con, sort }) => {
-    return createYiviPopup(con, sort)
-  },
-  { senderEmail: fromEmail }
-)
+<<< @/snippets/postguard-outlook-addon/src/commands/commands.ts{149-189 ts}
 
-// createYiviPopup opens a browser.windows.create() popup
-// and resolves when the popup sends back a JWT via
-// browser.runtime.sendMessage()
-```
-
-See the [Email Addon Integration](/integrations/email-addon) guide for the full pattern.
-
-### Yivi session runner utility
-
-The SDK exports a `runYiviSession()` function that handles the full Yivi session flow (start session, render QR, wait for result, get JWT). This is useful in popup windows:
-
-```ts
-import { runYiviSession } from '@e4a/pg-js'
-
-const jwt = await runYiviSession({
-  pkgUrl: 'https://pkg.example.com',
-  element: '#yivi-qr',
-  constraints: request.con,
-  sort: request.sort,
-})
-```
-
-### When to use
-
-- Browser extensions (Thunderbird, Outlook, Chrome)
-- Environments where DOM-based Yivi rendering is not possible in the main context
-- Custom Yivi flows (mobile apps, CLI tools)
-- Server-mediated Yivi sessions
+See the [Email Addon Integration](/integrations/email-addon) guide for the full patterns.
 
 ## Decryption Authentication
 
-Decryption also requires identity verification. The same `element` and `session` patterns apply:
-
-```ts
-// Yivi Web (browser)
-await pg.decrypt({
-  uuid: '...',
-  element: '#yivi-container',
-})
-
-// Session callback (extension)
-await pg.decrypt({
-  data: ciphertext,
-  session: async (request) => {
-    // request.sort is 'Decryption'
-    // request.hints contains display hints for the user
-    return await runYiviSession(request)
-  },
-  recipient: 'alice@example.com',
-})
-```
-
-::: warning
-You must provide either `element` or `session` for decryption. If neither is provided, the SDK throws a `DecryptionError`.
-:::
+Decryption also requires identity verification. The same `element` and `session` patterns apply. You must provide either `element` or `session` for decryption. If neither is provided, the SDK throws a `DecryptionError`.

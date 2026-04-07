@@ -35,20 +35,8 @@ Install the SDK:
 npm install @e4a/pg-js @e4a/pg-wasm
 ```
 
-Create a client and encrypt:
+Initialize PostGuard and encrypt files for delivery:
 
-```typescript
-import { PostGuard } from '@e4a/pg-js'
-
-const pg = new PostGuard({
-  pkgUrl: 'https://pkg.example.com',
-})
-
-const encrypted = await pg.encrypt({
-  sign: pg.sign.apiKey('your-api-key'),
-  recipients: [pg.recipient.email('alice@example.com')],
-  data: new TextEncoder().encode('Hello, Alice!'),
-})
-```
+<<< @/snippets/postguard-examples/pg-sveltekit/src/lib/postguard/encryption.ts
 
 Read the [concepts guide](/guide/concepts) to understand how this works, or jump straight to [getting started](/guide/getting-started).

@@ -30,59 +30,24 @@ PKG (Private Key Generator) is the identity-based encryption server. It issues u
 
 Cryptify is an optional file storage and email delivery service. It stores encrypted files and can send notification emails to recipients.
 
-## Constructor Options
+## Constructor
 
-```ts
-import { PostGuard } from '@e4a/pg-js'
+The SvelteKit example initializes PostGuard with a PKG URL and Cryptify URL from environment variables:
 
-const pg = new PostGuard({
-  pkgUrl: 'https://pkg.example.com',
-  cryptifyUrl: 'https://cryptify.example.com',
-  headers: { 'X-Custom-Header': 'value' },
-  wasm: preloadedWasmModule,
-})
-```
+<<< @/snippets/postguard-examples/pg-sveltekit/src/lib/postguard/encryption.ts{1-5 ts}
 
-### `pkgUrl` (required)
+The Thunderbird addon passes additional options for custom headers and a pre-loaded WASM module:
 
-The URL of the PKG server. All encryption and decryption operations communicate with this server to obtain public parameters and user secret keys.
+<<< @/snippets/postguard-tb-addon/src/background/background.ts{199-206 ts}
 
-### `cryptifyUrl` (optional)
+### Options
 
-The URL of the Cryptify file storage service. Required for:
-- `encryptAndUpload()`: encrypt and store files
-- `encryptAndDeliver()`: encrypt, store, and send email notification
-- `decrypt({ uuid })`: decrypt files stored on Cryptify
-
-Not needed for `encrypt()` and `decrypt({ data })`, which work with raw bytes.
-
-### `headers` (optional)
-
-Custom HTTP headers included in all requests to the PKG and Cryptify backends. Useful for client version identification or tracking.
-
-```ts
-const pg = new PostGuard({
-  pkgUrl: 'https://pkg.example.com',
-  headers: {
-    'X-PostGuard-Client-Version': 'MyApp/1.0',
-  },
-})
-```
-
-### `wasm` (optional)
-
-A pre-loaded `@e4a/pg-wasm` module. By default, the SDK dynamically imports `@e4a/pg-wasm` when needed. In environments where dynamic imports do not work (browser extensions, certain bundler configurations), pre-load the WASM module and pass it in:
-
-```ts
-import * as pgWasm from '@e4a/pg-wasm'
-
-const pg = new PostGuard({
-  pkgUrl: 'https://pkg.example.com',
-  wasm: pgWasm,
-})
-```
-
-The `wasm` option accepts any object that provides `sealStream` and `StreamUnsealer` matching the `@e4a/pg-wasm` interface. See [Custom Integration](/integrations/custom) for more WASM loading strategies.
+| Option | Type | Required | Description |
+|--------|------|----------|-------------|
+| `pkgUrl` | `string` | Yes | URL of the PKG server |
+| `cryptifyUrl` | `string` | No | URL of the Cryptify file storage service. Required for `encryptAndUpload`, `encryptAndDeliver`, and `decrypt({ uuid })`. |
+| `headers` | `Record<string, string>` | No | Custom HTTP headers included in all requests to PKG and Cryptify |
+| `wasm` | `WasmModule` | No | Pre-loaded `@e4a/pg-wasm` module. By default the SDK dynamically imports it. |
 
 ## Builder Methods
 
@@ -96,7 +61,7 @@ The `PostGuard` instance exposes builder methods for constructing sign methods a
 | `pg.sign.yivi({ element, senderEmail })` | `YiviSign` | Browser apps with Yivi QR widget |
 | `pg.sign.session(callback, { senderEmail })` | `SessionSign` | Extensions, custom Yivi flows |
 
-See [Authentication Methods](/sdk/auth-methods) for details.
+See [Authentication Methods](/sdk/auth-methods) for details and real usage from the Thunderbird addon.
 
 ### `pg.recipient.*`
 
@@ -106,44 +71,8 @@ See [Authentication Methods](/sdk/auth-methods) for details.
 | `pg.recipient.emailDomain(email)` | `EmailDomainRecipient` | Encrypt for anyone at a domain |
 | `pg.recipient.withPolicy(email, policy)` | `CustomPolicyRecipient` | Encrypt with custom attribute requirements |
 
-See [Encryption](/sdk/encryption) for recipient examples.
+See [Encryption](/sdk/encryption) for recipient examples from real code.
 
 ### `pg.email.*`
 
 Email helper methods for building and parsing PostGuard-encrypted emails. See [Email Helpers](/sdk/email-helpers).
-
-## Exported Utilities
-
-Besides the `PostGuard` class, the package exports standalone utilities:
-
-```ts
-import {
-  // Error classes
-  PostGuardError,
-  NetworkError,
-  YiviNotInstalledError,
-  DecryptionError,
-  IdentityMismatchError,
-
-  // PKG API functions
-  fetchMPK,
-  fetchVerificationKey,
-
-  // Policy utilities
-  buildKeyRequest,
-  sortPolicies,
-  secondsTill4AM,
-
-  // Email helpers (also available via pg.email.*)
-  buildMime,
-  injectMimeHeaders,
-  createEnvelope,
-  extractCiphertext,
-  extractArmoredPayload,
-  armorBase64,
-  toUrlSafeBase64,
-
-  // Yivi session runner
-  runYiviSession,
-} from '@e4a/pg-js'
-```

@@ -140,21 +140,13 @@ This means: "The recipient must prove they own `alice@example.com` AND disclose 
 | `pbdf.gemeente.personalData.dateofbirth` | Date of birth |
 | `pbdf.sidn-pbdf.mobilenumber.mobilenumber` | Mobile phone number |
 
-The SDK provides helper methods that build these policies automatically:
+The SDK provides helper methods that build these policies automatically. The SvelteKit example uses `pg.recipient.email()` and `pg.recipient.emailDomain()`:
 
-```typescript
-// Encrypt for a specific email
-pg.recipient.email('alice@example.com')
+<<< @/snippets/postguard-examples/pg-sveltekit/src/lib/postguard/encryption.ts{20-31 ts}
 
-// Encrypt for anyone at a domain
-pg.recipient.emailDomain('alice@example.com')  // uses the domain part
+The Thunderbird addon uses `pg.recipient.withPolicy()` for custom per-recipient policies:
 
-// Encrypt with a custom policy (email + name)
-pg.recipient.withPolicy('alice@example.com', [
-  { t: 'pbdf.sidn-pbdf.email.email', v: 'alice@example.com' },
-  { t: 'pbdf.gemeente.personalData.fullname' },
-])
-```
+<<< @/snippets/postguard-tb-addon/src/background/background.ts{362-376 ts}
 
 ::: info Attribute identifiers
 Attribute identifiers like `pbdf.sidn-pbdf.email.email` follow the Yivi attribute scheme. `pbdf` is the scheme, `sidn-pbdf` is the issuer, `email` is the credential, and the final `email` is the specific attribute within that credential.
@@ -187,18 +179,9 @@ The sender proves their email address via Yivi, just like the recipient does dur
 ### API key signing (PostGuard for Business)
 For automated or server-side encryption, an API key replaces the Yivi step. The organization operating the sender's application is trusted to authenticate the sender through its own mechanisms.
 
-When the recipient decrypts, the SDK returns a `sender` object containing the verified identity attributes of the sender:
+When the recipient decrypts, the SDK returns a `sender` object containing the verified identity attributes of the sender. The Thunderbird addon extracts sender attributes to build identity badges:
 
-```typescript
-const result = await pg.decrypt({ data: ciphertext, element: '#yivi' })
-
-if (result.sender) {
-  console.log('Sent by:', result.sender.public.con)
-  // e.g. [{ t: 'pbdf.sidn-pbdf.email.email', v: 'bob@example.com' }]
-} else {
-  console.log('Unsigned, sender identity unknown')
-}
-```
+<<< @/snippets/postguard-tb-addon/src/background/background.ts{742-750 ts}
 
 ## Wire format
 

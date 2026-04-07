@@ -3,11 +3,13 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "docs:dev": "vitepress dev docs",
-    "docs:build": "vitepress build docs",
+    "snippets": "bash scripts/fetch-snippets.sh",
+    "docs:dev": "npm run snippets && vitepress dev docs",
+    "docs:build": "npm run snippets && vitepress build docs",
     "docs:preview": "vitepress preview docs"
   },
   "devDependencies": {
+    "@e4a/pg-js": "^0.2.0",
     "vitepress": "^1.6.4"
   }
 }

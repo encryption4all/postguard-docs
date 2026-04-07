@@ -1,6 +1,6 @@
 # Getting Started
 
-This guide walks you through installing the PostGuard SDK, encrypting data, and decrypting it again.
+This guide walks you through installing the PostGuard SDK, encrypting data, and decrypting it again. All code examples come from the [postguard-examples](https://github.com/encryption4all/postguard-examples) SvelteKit app and the [Thunderbird addon](https://github.com/encryption4all/postguard-tb-addon).
 
 ## Prerequisites
 
@@ -33,103 +33,35 @@ If you plan to use Yivi-based authentication in the browser, also install the Yi
 npm install @privacybydesign/yivi-core @privacybydesign/yivi-client @privacybydesign/yivi-web
 ```
 
-## 2. Initialize PostGuard
+## 2. Initialize and Encrypt
 
-Create a `PostGuard` instance with the PKG server URL. If you need file upload/download through Cryptify, pass `cryptifyUrl` as well.
+Create a PostGuard instance and encrypt files for delivery. This module from the SvelteKit example initializes the client and wraps `encryptAndDeliver` with an API key:
 
-```ts
-import { PostGuard } from '@e4a/pg-js'
+<<< @/snippets/postguard-examples/pg-sveltekit/src/lib/postguard/encryption.ts
 
-const pg = new PostGuard({
-  pkgUrl: 'https://pkg.example.com',
-  cryptifyUrl: 'https://cryptify.example.com', // optional
-})
-```
+The configuration comes from environment variables:
 
-## 3. Encrypt
+<<< @/snippets/postguard-examples/pg-sveltekit/src/lib/config.ts
 
-Choose an authentication method and specify recipients. This example uses an API key and uploads files to Cryptify:
+<<< @/snippets/postguard-examples/pg-sveltekit/.env.example
 
-```ts
-const result = await pg.encryptAndUpload({
-  sign: pg.sign.apiKey('your-api-key'),
-  recipients: [
-    pg.recipient.email('alice@example.com'),
-    pg.recipient.email('bob@example.com'),
-  ],
-  files: fileInput.files, // FileList from an <input type="file">
-  onProgress: (pct) => console.log(`${pct}% uploaded`),
-})
+### Encrypting raw data for email
 
-console.log('Encrypted file UUID:', result.uuid)
-```
+For email integration, the Thunderbird addon uses `pg.encrypt()` with raw MIME bytes instead of files. It builds the MIME, encrypts with a Yivi session callback, and wraps the result in an envelope:
 
-::: tip
-`encryptAndUpload` requires `cryptifyUrl` to be set in the constructor. For raw byte encryption without Cryptify, use `pg.encrypt()` instead.
-:::
+<<< @/snippets/postguard-tb-addon/src/background/background.ts{348-410 ts}
 
-### Encrypting raw data
+## 3. Decrypt
 
-If you want the encrypted bytes directly (for email integration or custom storage), use `encrypt`:
+The SvelteKit example decrypts files from a Cryptify UUID using the Yivi QR widget:
 
-```ts
-const plaintext = new TextEncoder().encode('Hello, PostGuard!')
+<<< @/snippets/postguard-examples/pg-sveltekit/src/routes/download/+page.svelte{1-75}
 
-const ciphertext = await pg.encrypt({
-  sign: pg.sign.apiKey('your-api-key'),
-  recipients: [pg.recipient.email('alice@example.com')],
-  data: plaintext,
-})
+### Decrypting raw data
 
-// ciphertext is a Uint8Array
-```
+The Thunderbird addon decrypts raw ciphertext using a session callback that opens a Yivi popup:
 
-### Encrypting and delivering via email
-
-If you want Cryptify to send notification emails to recipients with a download link:
-
-```ts
-const result = await pg.encryptAndDeliver({
-  sign: pg.sign.apiKey('your-api-key'),
-  recipients: [pg.recipient.email('alice@example.com')],
-  files: [myFile],
-  delivery: {
-    message: 'Here are the documents you requested.',
-    language: 'EN',
-    confirmToSender: true,
-  },
-})
-```
-
-## 4. Decrypt
-
-### From a Cryptify UUID (browser with Yivi)
-
-```ts
-const result = await pg.decrypt({
-  uuid: 'abc123-def456-...',
-  element: '#yivi-container', // DOM element for the Yivi QR code
-})
-
-console.log('Decrypted files:', result.files)
-result.download('decrypted-files.zip')
-```
-
-### From raw encrypted data
-
-```ts
-const result = await pg.decrypt({
-  data: ciphertext, // Uint8Array
-  session: async (request) => {
-    // Your custom Yivi session handler, must return a JWT
-    return await myYiviSessionHandler(request)
-  },
-  recipient: 'alice@example.com',
-})
-
-console.log('Plaintext:', new TextDecoder().decode(result.plaintext))
-console.log('Sender:', result.sender)
-```
+<<< @/snippets/postguard-tb-addon/src/background/background.ts{713-738 ts}
 
 ## Bundler configuration
 
@@ -137,40 +69,15 @@ The SDK depends on `@e4a/pg-wasm`, which is a WebAssembly module. Most bundlers 
 
 ### Vite / SvelteKit
 
-```sh
-npm install -D vite-plugin-wasm vite-plugin-top-level-await
-```
+You need Vite plugins for WASM support and Node.js polyfills for browser environments. Here is a full working `vite.config.ts` from the [SvelteKit example](https://github.com/encryption4all/postguard-examples):
 
-```ts
-// vite.config.ts
-import wasm from 'vite-plugin-wasm'
-import topLevelAwait from 'vite-plugin-top-level-await'
-
-export default {
-  plugins: [wasm(), topLevelAwait()],
-}
-```
-
-You may also need Node.js polyfills for browser environments if your code uses `buffer`, `stream`, or `process`:
-
-```sh
-npm install -D @esbuild-plugins/node-globals-polyfill
-```
+<<< @/snippets/postguard-examples/pg-sveltekit/vite.config.ts
 
 ### Browser extensions
 
-Browser extensions often cannot use dynamic `import()` for WASM modules. Pre-load the module and pass it to the constructor:
+Browser extensions often cannot use dynamic `import()` for WASM modules. The Thunderbird addon loads WASM indirectly and passes it to the constructor:
 
-```ts
-import * as pgWasm from '@e4a/pg-wasm'
-
-const pg = new PostGuard({
-  pkgUrl: 'https://pkg.example.com',
-  wasm: pgWasm,
-})
-```
-
-See the [Custom Integration](/integrations/custom) guide for more WASM loading strategies.
+<<< @/snippets/postguard-tb-addon/src/background/background.ts{65-206 ts}
 
 ## Next Steps
 

@@ -37,7 +37,6 @@ export default defineConfig({
         items: [
           { text: 'Web Application', link: '/integrations/web-app' },
           { text: 'Email Addon', link: '/integrations/email-addon' },
-          { text: 'Custom Integration', link: '/integrations/custom' },
         ],
       },
     ],
