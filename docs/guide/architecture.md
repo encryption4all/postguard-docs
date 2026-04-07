@@ -18,7 +18,7 @@ There are also client applications built on the SDK:
 | Application | Description |
 |---|---|
 | PostGuard website | SvelteKit web app for encrypting and sharing files via Cryptify |
-| Thunderbird addon (`pg4tb`) | Extension for Thunderbird 128+ that encrypts and decrypts emails |
+| Thunderbird addon | Extension for Thunderbird 128+ that encrypts and decrypts emails |
 | Outlook addon | Office add-in that encrypts and decrypts emails in Outlook |
 | CLI tool (`pg-cli`) | Command-line tool for encrypting and decrypting files |
 

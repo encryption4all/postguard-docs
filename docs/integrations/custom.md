@@ -296,7 +296,7 @@ const result = await pg.decrypt({
 
 ## CLI Tool (pg-cli)
 
-The `pg-cli` tool provides command-line encryption and decryption. It is part of the [PostGuard core repository](https://github.com/encryption4all) and is written in Rust.
+The `pg-cli` tool provides command-line encryption and decryption. It is part of the [PostGuard core repository](https://github.com/encryption4all/postguard) and is written in Rust.
 
 ### Encrypt a file
 

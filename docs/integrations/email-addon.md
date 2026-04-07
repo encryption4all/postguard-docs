@@ -2,7 +2,7 @@
 
 This guide explains how to build an email addon (Thunderbird, Outlook, or similar) using the PostGuard SDK. Email addons run in extension environments where DOM-based Yivi rendering is handled in separate popup windows, and dynamic imports may not work as expected.
 
-Both the [Thunderbird addon](https://github.com/encryption4all) (`pg4tb`) and the [Outlook addon](https://github.com/encryption4all) follow the patterns described here.
+Both the [Thunderbird addon](https://github.com/encryption4all/postguard-tb-addon) and the [Outlook addon](https://github.com/encryption4all/postguard-outlook-addon) follow the patterns described here.
 
 ## Architecture
 

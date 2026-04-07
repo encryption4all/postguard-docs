@@ -1,6 +1,6 @@
 # Web Application Integration
 
-This guide shows how to integrate PostGuard encryption and decryption into a web application. The examples use SvelteKit (matching the [postguard-examples](https://github.com/encryption4all) repository), but the patterns apply to any frontend framework.
+This guide shows how to integrate PostGuard encryption and decryption into a web application. The examples use SvelteKit, but the patterns apply to any frontend framework.
 
 ## Setup
 
