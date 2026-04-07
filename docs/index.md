@@ -80,4 +80,5 @@ export async function encryptAndSend(options: EncryptAndSendOptions): Promise<vo
 ```
 
 <small>[Source: encryption.ts#L40-L78](https://github.com/encryption4all/postguard-examples/blob/6d538923ade9b013222685bec1f4588f610ccf86/pg-sveltekit/src/lib/postguard/encryption.ts#L40-L78)</small>
+
 Read the [concepts guide](/guide/concepts) to understand how this works, or jump straight to [getting started](/guide/getting-started).

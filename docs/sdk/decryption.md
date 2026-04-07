@@ -92,6 +92,7 @@ Downloads and decrypts a file stored on Cryptify. The SvelteKit example reads th
 ```
 
 <small>[Source: +page.svelte#L1-L75](https://github.com/encryption4all/postguard-examples/blob/6d538923ade9b013222685bec1f4588f610ccf86/pg-sveltekit/src/routes/download/+page.svelte#L1-L75)</small>
+
 ::: warning
 Requires `cryptifyUrl` to be set in the constructor.
 :::
@@ -141,6 +142,7 @@ Decrypts raw ciphertext bytes (e.g. from an encrypted email). The Thunderbird ad
 ```
 
 <small>[Source: background.ts#L713-L738](https://github.com/encryption4all/postguard-tb-addon/blob/d2ec84d26ab52044c3057dd3aeb7c8e1e3bc26ce/src/background/background.ts#L713-L738)</small>
+
 ### `DecryptDataResult`
 
 | Property | Type | Description |
@@ -164,6 +166,7 @@ Both result types include a `sender` field with the verified identity of the per
 ```
 
 <small>[Source: +page.svelte#L66-L69](https://github.com/encryption4all/postguard-examples/blob/6d538923ade9b013222685bec1f4588f610ccf86/pg-sveltekit/src/routes/download/+page.svelte#L66-L69)</small>
+
 The Thunderbird addon extracts both public and private sender attributes to build identity badges:
 
 ```ts
@@ -179,6 +182,7 @@ async function handleYiviPopupDone(
 ```
 
 <small>[Source: background.ts#L742-L750](https://github.com/encryption4all/postguard-tb-addon/blob/d2ec84d26ab52044c3057dd3aeb7c8e1e3bc26ce/src/background/background.ts#L742-L750)</small>
+
 ## Error Handling
 
 Decryption can throw:
@@ -202,4 +206,5 @@ The SvelteKit download page handles these errors:
 ```
 
 <small>[Source: +page.svelte#L56-L64](https://github.com/encryption4all/postguard-examples/blob/6d538923ade9b013222685bec1f4588f610ccf86/pg-sveltekit/src/routes/download/+page.svelte#L56-L64)</small>
+
 See [Error Handling](/sdk/errors) for the full error reference.

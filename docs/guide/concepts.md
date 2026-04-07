@@ -158,6 +158,7 @@ The SDK provides helper methods that build these policies automatically. The Sve
 ```
 
 <small>[Source: encryption.ts#L20-L31](https://github.com/encryption4all/postguard-examples/blob/6d538923ade9b013222685bec1f4588f610ccf86/pg-sveltekit/src/lib/postguard/encryption.ts#L20-L31)</small>
+
 The Thunderbird addon uses `pg.recipient.withPolicy()` for custom per-recipient policies:
 
 ```ts
@@ -179,6 +180,7 @@ The Thunderbird addon uses `pg.recipient.withPolicy()` for custom per-recipient 
 ```
 
 <small>[Source: background.ts#L362-L376](https://github.com/encryption4all/postguard-tb-addon/blob/d2ec84d26ab52044c3057dd3aeb7c8e1e3bc26ce/src/background/background.ts#L362-L376)</small>
+
 ::: info Attribute identifiers
 Attribute identifiers like `pbdf.sidn-pbdf.email.email` follow the Yivi attribute scheme. `pbdf` is the scheme, `sidn-pbdf` is the issuer, `email` is the credential, and the final `email` is the specific attribute within that credential.
 :::
@@ -225,6 +227,7 @@ async function handleYiviPopupDone(
 ```
 
 <small>[Source: background.ts#L742-L750](https://github.com/encryption4all/postguard-tb-addon/blob/d2ec84d26ab52044c3057dd3aeb7c8e1e3bc26ce/src/background/background.ts#L742-L750)</small>
+
 ## Wire format
 
 PostGuard ciphertext uses a binary format with three parts:

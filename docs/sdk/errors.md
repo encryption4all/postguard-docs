@@ -88,6 +88,7 @@ The SvelteKit download page handles all decryption error types:
 ```
 
 <small>[Source: +page.svelte#L56-L64](https://github.com/encryption4all/postguard-examples/blob/6d538923ade9b013222685bec1f4588f610ccf86/pg-sveltekit/src/routes/download/+page.svelte#L56-L64)</small>
+
 The Thunderbird addon handles errors in the decryption flow:
 
 ```ts
@@ -102,6 +103,7 @@ The Thunderbird addon handles errors in the decryption flow:
 ```
 
 <small>[Source: background.ts#L798-L805](https://github.com/encryption4all/postguard-tb-addon/blob/d2ec84d26ab52044c3057dd3aeb7c8e1e3bc26ce/src/background/background.ts#L798-L805)</small>
+
 ::: tip
 Always check for the most specific error first (`IdentityMismatchError`) and work up to the most general (`PostGuardError`), since they form an inheritance chain.
 :::

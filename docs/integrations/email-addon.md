@@ -70,6 +70,7 @@ browser.scripting.messageDisplay
 ```
 
 <small>[Source: background.ts#L78-L106](https://github.com/encryption4all/postguard-tb-addon/blob/d2ec84d26ab52044c3057dd3aeb7c8e1e3bc26ce/src/background/background.ts#L78-L106)</small>
+
 ### Caching PKG keys
 
 The Thunderbird addon caches the Master Public Key in `browser.storage.local` for offline resilience. If the PKG is unreachable, the cached key is used as a fallback:
@@ -99,6 +100,7 @@ export async function fetchPublicKey(): Promise<string> {
 ```
 
 <small>[Source: pkg-client.ts#L13-L33](https://github.com/encryption4all/postguard-tb-addon/blob/d2ec84d26ab52044c3057dd3aeb7c8e1e3bc26ce/src/lib/pkg-client.ts#L13-L33)</small>
+
 ## The Session Callback Pattern
 
 Since the background script cannot render DOM elements, `pg.sign.session()` opens a popup, waits for the Yivi session to complete, and returns the JWT.
@@ -119,6 +121,7 @@ The background script tracks pending popups in a Map and resolves the Promise wh
 ```
 
 <small>[Source: background.ts#L56-L63](https://github.com/encryption4all/postguard-tb-addon/blob/d2ec84d26ab52044c3057dd3aeb7c8e1e3bc26ce/src/background/background.ts#L56-L63)</small>
+
 ```ts
     state.configWindowId = popupId;
   }
@@ -193,6 +196,7 @@ async function handlePolicyEditorDone(
 ```
 
 <small>[Source: background.ts#L608-L677](https://github.com/encryption4all/postguard-tb-addon/blob/d2ec84d26ab52044c3057dd3aeb7c8e1e3bc26ce/src/background/background.ts#L608-L677)</small>
+
 ### Message handler
 
 The background script routes `yiviPopupInit` and `yiviPopupDone` messages from the popup:
@@ -208,6 +212,7 @@ The background script routes `yiviPopupInit` and `yiviPopupDone` messages from t
 ```
 
 <small>[Source: background.ts#L126-L132](https://github.com/encryption4all/postguard-tb-addon/blob/d2ec84d26ab52044c3057dd3aeb7c8e1e3bc26ce/src/background/background.ts#L126-L132)</small>
+
 ### Yivi popup page
 
 The popup uses the SDK's `runYiviSession()` utility to handle the full Yivi flow, then sends the JWT back to the background:
@@ -292,6 +297,7 @@ async function init() {
 ```
 
 <small>[Source: yivi-popup.ts#L21-L96](https://github.com/encryption4all/postguard-tb-addon/blob/d2ec84d26ab52044c3057dd3aeb7c8e1e3bc26ce/src/pages/yivi-popup/yivi-popup.ts#L21-L96)</small>
+
 ## Email Encryption Flow
 
 With the session callback in place, the encryption flow intercepts the compose send event. This is the full `handleBeforeSend` handler from the Thunderbird addon:
@@ -448,6 +454,7 @@ async function handleBeforeSend(tab: { id: number }, details: any) {
 ```
 
 <small>[Source: background.ts#L284-L431](https://github.com/encryption4all/postguard-tb-addon/blob/d2ec84d26ab52044c3057dd3aeb7c8e1e3bc26ce/src/background/background.ts#L284-L431)</small>
+
 The key steps are:
 1. Build attachments list from the compose tab
 2. Fetch threading headers if replying
@@ -496,6 +503,7 @@ browser.compose.onBeforeSend.addListener(handleBeforeSend);
 ```
 
 <small>[Source: background.ts#L143-L169](https://github.com/encryption4all/postguard-tb-addon/blob/d2ec84d26ab52044c3057dd3aeb7c8e1e3bc26ce/src/background/background.ts#L143-L169)</small>
+
 ## Email Decryption Flow
 
 ```ts
@@ -629,6 +637,7 @@ async function handleDecryptMessage(messageId: number): Promise<{ ok: boolean; e
 ```
 
 <small>[Source: background.ts#L680-L806](https://github.com/encryption4all/postguard-tb-addon/blob/d2ec84d26ab52044c3057dd3aeb7c8e1e3bc26ce/src/background/background.ts#L680-L806)</small>
+
 The key steps are:
 1. Extract ciphertext from attachments or HTML body using `pg.email.extractCiphertext()`
 2. Decrypt with `pg.decrypt()` using a session callback
@@ -661,6 +670,7 @@ for (const tab of existingTabs) {
 ```
 
 <small>[Source: background.ts#L249-L265](https://github.com/encryption4all/postguard-tb-addon/blob/d2ec84d26ab52044c3057dd3aeb7c8e1e3bc26ce/src/background/background.ts#L249-L265)</small>
+
 ## Outlook-Specific Notes
 
 The Outlook addon uses the Office JS API instead of WebExtension APIs:
@@ -723,6 +733,7 @@ async function openYiviDialogForSigning(con: AttributeCon): Promise<string> {
 ```
 
 <small>[Source: commands.ts#L149-L189](https://github.com/encryption4all/postguard-outlook-addon/blob/dd0073b568a94524e2658dd44e2851d2dccfac82/src/commands/commands.ts#L149-L189)</small>
+
 The dialog receives data via URL parameters and sends the JWT back with `Office.context.ui.messageParent()`:
 
 ```ts
@@ -817,6 +828,7 @@ Office.onReady(() => {
 ```
 
 <small>[Source: dialog.ts#L50-L137](https://github.com/encryption4all/postguard-outlook-addon/blob/dd0073b568a94524e2658dd44e2851d2dccfac82/src/dialog/dialog.ts#L50-L137)</small>
+
 ## Bundling Considerations
 
 Email extension environments have specific bundling requirements:

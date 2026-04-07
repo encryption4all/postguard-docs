@@ -30,6 +30,7 @@ The SvelteKit example uses `pg.recipient.email()` and `pg.recipient.emailDomain(
 ```
 
 <small>[Source: encryption.ts#L20-L31](https://github.com/encryption4all/postguard-examples/blob/6d538923ade9b013222685bec1f4588f610ccf86/pg-sveltekit/src/lib/postguard/encryption.ts#L20-L31)</small>
+
 The Thunderbird addon builds recipients with custom policies when configured:
 
 ```ts
@@ -51,6 +52,7 @@ The Thunderbird addon builds recipients with custom policies when configured:
 ```
 
 <small>[Source: background.ts#L362-L376](https://github.com/encryption4all/postguard-tb-addon/blob/d2ec84d26ab52044c3057dd3aeb7c8e1e3bc26ce/src/background/background.ts#L362-L376)</small>
+
 Under the hood, `pg.recipient.email()` creates a policy with the attribute type `pbdf.sidn-pbdf.email.email`, while `pg.recipient.emailDomain()` extracts the domain from the email and uses `pbdf.sidn-pbdf.email.domain`.
 
 ## `encrypt()`
@@ -70,6 +72,7 @@ Encrypts raw data and returns the ciphertext as a `Uint8Array`. No files are upl
 ```
 
 <small>[Source: background.ts#L388-L396](https://github.com/encryption4all/postguard-tb-addon/blob/d2ec84d26ab52044c3057dd3aeb7c8e1e3bc26ce/src/background/background.ts#L388-L396)</small>
+
 ### Parameters
 
 | Parameter | Type | Required | Description |
@@ -142,6 +145,7 @@ export async function encryptAndSend(options: EncryptAndSendOptions): Promise<vo
 ```
 
 <small>[Source: encryption.ts#L50-L87](https://github.com/encryption4all/postguard-examples/blob/6d538923ade9b013222685bec1f4588f610ccf86/pg-sveltekit/src/lib/postguard/encryption.ts#L50-L87)</small>
+
 ### Delivery options
 
 | Option | Type | Default | Description |

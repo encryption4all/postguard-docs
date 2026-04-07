@@ -36,6 +36,7 @@ The SvelteKit example uses an API key for encryption:
 ```
 
 <small>[Source: encryption.ts#L17-L32](https://github.com/encryption4all/postguard-examples/blob/6d538923ade9b013222685bec1f4588f610ccf86/pg-sveltekit/src/lib/postguard/encryption.ts#L17-L32)</small>
+
 The SDK sends the API key as a `Bearer` token in the `Authorization` header when requesting signing keys from the PKG at `POST /v2/irma/sign/key`.
 
 ::: info
@@ -58,6 +59,7 @@ The SvelteKit download page uses the `element` parameter for Yivi-based decrypti
 ```
 
 <small>[Source: +page.svelte#L44-L49](https://github.com/encryption4all/postguard-examples/blob/6d538923ade9b013222685bec1f4588f610ccf86/pg-sveltekit/src/routes/download/+page.svelte#L44-L49)</small>
+
 ### Requirements
 
 The Yivi web packages must be installed:
@@ -95,6 +97,7 @@ The Thunderbird addon uses this for both encryption and decryption. For encrypti
 ```
 
 <small>[Source: background.ts#L388-L396](https://github.com/encryption4all/postguard-tb-addon/blob/d2ec84d26ab52044c3057dd3aeb7c8e1e3bc26ce/src/background/background.ts#L388-L396)</small>
+
 For decryption:
 
 ```ts
@@ -113,6 +116,7 @@ For decryption:
 ```
 
 <small>[Source: background.ts#L727-L738](https://github.com/encryption4all/postguard-tb-addon/blob/d2ec84d26ab52044c3057dd3aeb7c8e1e3bc26ce/src/background/background.ts#L727-L738)</small>
+
 The `createYiviPopup` function opens a browser popup and resolves with the JWT when the Yivi session completes:
 
 ```ts
@@ -170,6 +174,7 @@ async function handlePolicyEditorInit(windowId: number | undefined) {
 ```
 
 <small>[Source: background.ts#L608-L658](https://github.com/encryption4all/postguard-tb-addon/blob/d2ec84d26ab52044c3057dd3aeb7c8e1e3bc26ce/src/background/background.ts#L608-L658)</small>
+
 ### The popup page
 
 The popup uses the SDK's `runYiviSession()` utility to handle the full Yivi flow:
@@ -219,6 +224,7 @@ The popup uses the SDK's `runYiviSession()` utility to handle the full Yivi flow
 ```
 
 <small>[Source: yivi-popup.ts#L56-L96](https://github.com/encryption4all/postguard-tb-addon/blob/d2ec84d26ab52044c3057dd3aeb7c8e1e3bc26ce/src/pages/yivi-popup/yivi-popup.ts#L56-L96)</small>
+
 ### Outlook dialog pattern
 
 The Outlook addon uses `Office.context.ui.displayDialogAsync()` instead of `browser.windows.create()`:
@@ -268,6 +274,7 @@ async function openYiviDialogForSigning(con: AttributeCon): Promise<string> {
 ```
 
 <small>[Source: commands.ts#L149-L189](https://github.com/encryption4all/postguard-outlook-addon/blob/dd0073b568a94524e2658dd44e2851d2dccfac82/src/commands/commands.ts#L149-L189)</small>
+
 See the [Email Addon Integration](/integrations/email-addon) guide for the full patterns.
 
 ## Decryption Authentication

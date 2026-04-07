@@ -44,6 +44,7 @@ The Thunderbird addon builds the inner MIME from compose details:
 ```
 
 <small>[Source: background.ts#L348-L360](https://github.com/encryption4all/postguard-tb-addon/blob/d2ec84d26ab52044c3057dd3aeb7c8e1e3bc26ce/src/background/background.ts#L348-L360)</small>
+
 ### Parameters
 
 | Parameter | Type | Required | Description |
@@ -83,6 +84,7 @@ The Thunderbird addon creates the envelope and attaches it:
 ```
 
 <small>[Source: background.ts#L403-L410](https://github.com/encryption4all/postguard-tb-addon/blob/d2ec84d26ab52044c3057dd3aeb7c8e1e3bc26ce/src/background/background.ts#L403-L410)</small>
+
 ### Parameters
 
 | Parameter | Type | Required | Description |
@@ -109,6 +111,7 @@ Returns a `Uint8Array` with the ciphertext, or `null` if nothing is found.
 ```
 
 <small>[Source: background.ts#L713-L716](https://github.com/encryption4all/postguard-tb-addon/blob/d2ec84d26ab52044c3057dd3aeb7c8e1e3bc26ce/src/background/background.ts#L713-L716)</small>
+
 ### Parameters
 
 | Parameter | Type | Required | Description |
@@ -146,6 +149,7 @@ async function handleDecryptMessage(messageId: number): Promise<{ ok: boolean; e
 ```
 
 <small>[Source: background.ts#L752-L771](https://github.com/encryption4all/postguard-tb-addon/blob/d2ec84d26ab52044c3057dd3aeb7c8e1e3bc26ce/src/background/background.ts#L752-L771)</small>
+
 ### Parameters
 
 | Parameter | Type | Required | Description |
@@ -310,6 +314,7 @@ async function handleBeforeSend(tab: { id: number }, details: any) {
 ```
 
 <small>[Source: background.ts#L284-L431](https://github.com/encryption4all/postguard-tb-addon/blob/d2ec84d26ab52044c3057dd3aeb7c8e1e3bc26ce/src/background/background.ts#L284-L431)</small>
+
 ## Full Decryption Workflow
 
 The decryption handler extracts ciphertext, decrypts, builds identity badges, injects headers, and imports the decrypted message back into the folder:

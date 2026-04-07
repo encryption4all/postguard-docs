@@ -89,6 +89,7 @@ export async function encryptAndSend(options: EncryptAndSendOptions): Promise<vo
 ```
 
 <small>[Source: encryption.ts#L40-L87](https://github.com/encryption4all/postguard-examples/blob/6d538923ade9b013222685bec1f4588f610ccf86/pg-sveltekit/src/lib/postguard/encryption.ts#L40-L87)</small>
+
 The configuration comes from environment variables:
 
 ```ts
@@ -103,6 +104,7 @@ export const FILEREAD_CHUNK_SIZE = 1024 * 1024; // 1MB
 ```
 
 <small>[Source: config.ts](https://github.com/encryption4all/postguard-examples/blob/6d538923ade9b013222685bec1f4588f610ccf86/pg-sveltekit/src/lib/config.ts)</small>
+
 ```sh
 # Public (available in browser)
 PUBLIC_PKG_URL=https://pkg.staging.yivi.app
@@ -114,6 +116,7 @@ PG_API_KEY=PG-API-your-key-here
 ```
 
 <small>[Source: .env.example](https://github.com/encryption4all/postguard-examples/blob/6d538923ade9b013222685bec1f4588f610ccf86/pg-sveltekit/.env.example)</small>
+
 ### Encrypting raw data for email
 
 For email integration, the Thunderbird addon uses `pg.encrypt()` with raw MIME bytes instead of files. It builds the MIME, encrypts with a Yivi session callback, and wraps the result in an envelope:
@@ -185,6 +188,7 @@ For email integration, the Thunderbird addon uses `pg.encrypt()` with raw MIME b
 ```
 
 <small>[Source: background.ts#L348-L410](https://github.com/encryption4all/postguard-tb-addon/blob/d2ec84d26ab52044c3057dd3aeb7c8e1e3bc26ce/src/background/background.ts#L348-L410)</small>
+
 ## 3. Decrypt
 
 The SvelteKit example decrypts files from a Cryptify UUID using the Yivi QR widget:
@@ -268,6 +272,7 @@ The SvelteKit example decrypts files from a Cryptify UUID using the Yivi QR widg
 ```
 
 <small>[Source: +page.svelte#L1-L75](https://github.com/encryption4all/postguard-examples/blob/6d538923ade9b013222685bec1f4588f610ccf86/pg-sveltekit/src/routes/download/+page.svelte#L1-L75)</small>
+
 ### Decrypting raw data
 
 The Thunderbird addon decrypts raw ciphertext using a session callback that opens a Yivi popup:
@@ -302,6 +307,7 @@ The Thunderbird addon decrypts raw ciphertext using a session callback that open
 ```
 
 <small>[Source: background.ts#L713-L738](https://github.com/encryption4all/postguard-tb-addon/blob/d2ec84d26ab52044c3057dd3aeb7c8e1e3bc26ce/src/background/background.ts#L713-L738)</small>
+
 ## Bundler configuration
 
 The SDK depends on `@e4a/pg-wasm`, which is a WebAssembly module. Most bundlers need plugins to handle WASM imports.
@@ -358,6 +364,7 @@ export default defineConfig({
 ```
 
 <small>[Source: vite.config.ts](https://github.com/encryption4all/postguard-examples/blob/6d538923ade9b013222685bec1f4588f610ccf86/pg-sveltekit/vite.config.ts)</small>
+
 ### Browser extensions
 
 Browser extensions often cannot use dynamic `import()` for WASM modules. The Thunderbird addon loads WASM indirectly and passes it to the constructor:
@@ -395,6 +402,7 @@ browser.scripting.messageDisplay
 ```
 
 <small>[Source: background.ts#L78-L106](https://github.com/encryption4all/postguard-tb-addon/blob/d2ec84d26ab52044c3057dd3aeb7c8e1e3bc26ce/src/background/background.ts#L78-L106)</small>
+
 ## Next Steps
 
 - [SDK Overview](/sdk/overview): architecture and constructor options

@@ -61,6 +61,7 @@ export default defineConfig({
 ```
 
 <small>[Source: vite.config.ts](https://github.com/encryption4all/postguard-examples/blob/6d538923ade9b013222685bec1f4588f610ccf86/pg-sveltekit/vite.config.ts)</small>
+
 Configure the PKG and Cryptify URLs via environment variables:
 
 ```sh
@@ -74,6 +75,7 @@ PG_API_KEY=PG-API-your-key-here
 ```
 
 <small>[Source: .env.example](https://github.com/encryption4all/postguard-examples/blob/6d538923ade9b013222685bec1f4588f610ccf86/pg-sveltekit/.env.example)</small>
+
 Keep the API key server-side only:
 
 ```ts
@@ -83,6 +85,7 @@ export const PG_API_KEY = env['PG_API_KEY'] ?? '';
 ```
 
 <small>[Source: config.server.ts](https://github.com/encryption4all/postguard-examples/blob/6d538923ade9b013222685bec1f4588f610ccf86/pg-sveltekit/src/lib/config.server.ts)</small>
+
 The public config provides the PKG and Cryptify URLs to the browser:
 
 ```ts
@@ -97,6 +100,7 @@ export const FILEREAD_CHUNK_SIZE = 1024 * 1024; // 1MB
 ```
 
 <small>[Source: config.ts](https://github.com/encryption4all/postguard-examples/blob/6d538923ade9b013222685bec1f4588f610ccf86/pg-sveltekit/src/lib/config.ts)</small>
+
 ## Encrypt and Upload Files
 
 Create a module that initializes PostGuard and wraps the `encryptAndDeliver` call:
@@ -192,6 +196,7 @@ export async function encryptAndSend(options: EncryptAndSendOptions): Promise<vo
 ```
 
 <small>[Source: encryption.ts#L1-L87](https://github.com/encryption4all/postguard-examples/blob/6d538923ade9b013222685bec1f4588f610ccf86/pg-sveltekit/src/lib/postguard/encryption.ts#L1-L87)</small>
+
 Then build a page that calls this function. This example uses API key authentication (PostGuard for Business):
 
 ```svelte
@@ -263,6 +268,7 @@ Then build a page that calls this function. This example uses API key authentica
 ```
 
 <small>[Source: +page.svelte#L1-L65](https://github.com/encryption4all/postguard-examples/blob/6d538923ade9b013222685bec1f4588f610ccf86/pg-sveltekit/src/routes/send/+page.svelte#L1-L65)</small>
+
 The server load function passes the API key to the page:
 
 ```ts
@@ -277,6 +283,7 @@ export const load: PageServerLoad = async () => {
 ```
 
 <small>[Source: +page.server.ts](https://github.com/encryption4all/postguard-examples/blob/6d538923ade9b013222685bec1f4588f610ccf86/pg-sveltekit/src/routes/send/+page.server.ts)</small>
+
 ## Decrypt Files
 
 A page that decrypts files from a Cryptify UUID. The UUID and recipient can come from URL query parameters (as provided in Cryptify notification emails):
@@ -360,6 +367,7 @@ A page that decrypts files from a Cryptify UUID. The UUID and recipient can come
 ```
 
 <small>[Source: +page.svelte#L1-L75](https://github.com/encryption4all/postguard-examples/blob/6d538923ade9b013222685bec1f4588f610ccf86/pg-sveltekit/src/routes/download/+page.svelte#L1-L75)</small>
+
 ## Yivi QR Styling
 
 The Yivi QR container needs some CSS to render properly. Import the Yivi CSS or add minimal styles:

@@ -43,6 +43,7 @@ import { createFileReadable, getFileStoreStream } from './file-provider';
 ```
 
 <small>[Source: encryption.ts#L1-L5](https://github.com/encryption4all/postguard-examples/blob/6d538923ade9b013222685bec1f4588f610ccf86/pg-sveltekit/src/lib/postguard/encryption.ts#L1-L5)</small>
+
 The Thunderbird addon passes additional options for custom headers and a pre-loaded WASM module:
 
 ```ts
@@ -57,6 +58,7 @@ browser.windows.onCreated.addListener(async (window) => {
 ```
 
 <small>[Source: background.ts#L199-L206](https://github.com/encryption4all/postguard-tb-addon/blob/d2ec84d26ab52044c3057dd3aeb7c8e1e3bc26ce/src/background/background.ts#L199-L206)</small>
+
 ### Options
 
 | Option | Type | Required | Description |
