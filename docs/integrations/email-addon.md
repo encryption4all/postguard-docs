@@ -1,6 +1,8 @@
 # Email Addon Integration
 
-This guide explains how to build an email addon (Thunderbird, Outlook, or similar) using the PostGuard SDK. Email addons present a unique challenge: they run in an extension environment where DOM-based Yivi rendering is handled in separate popup windows, and dynamic imports may not work as expected.
+This guide explains how to build an email addon (Thunderbird, Outlook, or similar) using the PostGuard SDK. Email addons run in extension environments where DOM-based Yivi rendering is handled in separate popup windows, and dynamic imports may not work as expected.
+
+Both the [Thunderbird addon](https://github.com/encryption4all) (`pg4tb`) and the [Outlook addon](https://github.com/encryption4all) follow the patterns described here.
 
 ## Architecture
 
@@ -13,7 +15,7 @@ An email addon typically has three components:
 |  - Manages state          |  - pg.email.* helpers
 +---------------------------+
            |
-           | browser.runtime messages
+           | extension messaging
            |
 +---------------------------+
 |  Popup windows            |  Yivi QR rendering
@@ -22,13 +24,14 @@ An email addon typically has three components:
 +---------------------------+
            |
 +---------------------------+
-|  Content scripts          |  UI in compose/display
-|  - Compose overlay        |
-|  - Message display badge  |
+|  Content scripts / UI     |
+|  - Compose action button  |
+|  - Decrypt banner         |
+|  - Sender identity badges |
 +---------------------------+
 ```
 
-The key insight is that the **session callback** bridges the background script (where the SDK runs) and the popup (where the Yivi QR is shown).
+The background script owns the PostGuard SDK instance. The session callback bridges the background script (where encryption/decryption runs) and the popup (where the Yivi QR is shown).
 
 ## Initialization with Pre-loaded WASM
 
@@ -44,9 +47,9 @@ const pgWasmPath = './pg-wasm/load.js'
 const pgWasm: WasmModule = await import(/* @vite-ignore */ pgWasmPath)
 
 const pg = new PostGuard({
-  pkgUrl: 'https://pkg.postguard.eu',
+  pkgUrl: 'https://pkg.example.com',
   headers: {
-    'X-PostGuard-Client-Version': 'Thunderbird,128,pg4tb,0.8.0',
+    'X-PostGuard-Client-Version': 'Thunderbird,128,pg4tb,0.8.2',
   },
   wasm: pgWasm,
 })
@@ -55,6 +58,28 @@ const pg = new PostGuard({
 ::: tip
 The `wasm` option accepts any object that provides `sealStream` and `StreamUnsealer.new` methods matching the `@e4a/pg-wasm` interface. You can create a custom loader if the standard import does not work in your extension environment.
 :::
+
+### Caching PKG keys
+
+The Thunderbird addon caches the Master Public Key in `browser.storage.local` for offline resilience. If the PKG is unreachable, the cached key is used as a fallback:
+
+```ts
+import { fetchMPK, fetchVerificationKey } from '@e4a/pg-js'
+
+async function getCachedMPK(pkgUrl: string): Promise<string> {
+  const stored = await browser.storage.local.get('pg-mpk')
+  try {
+    const mpk = await fetchMPK(pkgUrl)
+    if (stored['pg-mpk'] !== mpk) {
+      await browser.storage.local.set({ 'pg-mpk': mpk })
+    }
+    return mpk
+  } catch {
+    if (stored['pg-mpk']) return stored['pg-mpk']
+    throw new Error('No master public key available')
+  }
+}
+```
 
 ## The Session Callback Pattern
 
@@ -130,6 +155,8 @@ browser.runtime.onMessage.addListener((message, sender) => {
 
 ### Step 3: The popup page
 
+The popup uses the SDK's `runYiviSession()` utility to handle the full Yivi flow:
+
 ```html
 <!-- popup/yivi.html -->
 <div id="yivi-qr"></div>
@@ -138,11 +165,29 @@ browser.runtime.onMessage.addListener((message, sender) => {
 
 ```ts
 // popup/yivi-popup.ts
+import { runYiviSession } from '@e4a/pg-js'
+
+const data = await browser.runtime.sendMessage({ type: 'yiviPopupInit' })
+
+try {
+  const jwt = await runYiviSession({
+    pkgUrl: PKG_URL,
+    element: '#yivi-qr',
+    constraints: data.con,
+    sort: data.sort,
+  })
+  await browser.runtime.sendMessage({ type: 'yiviPopupDone', jwt })
+} catch (err) {
+  window.close()
+}
+```
+
+Alternatively, you can set up the Yivi session manually using the Yivi packages directly:
+
+```ts
 import YiviCore from '@privacybydesign/yivi-core'
 import YiviClient from '@privacybydesign/yivi-client'
 import YiviWeb from '@privacybydesign/yivi-web'
-
-const data = await browser.runtime.sendMessage({ type: 'yiviPopupInit' })
 
 const yivi = new YiviCore({
   session: {
@@ -166,17 +211,12 @@ const yivi = new YiviCore({
 yivi.use(YiviWeb)
 yivi.use(YiviClient)
 
-try {
-  const jwt = await yivi.start()
-  await browser.runtime.sendMessage({ type: 'yiviPopupDone', jwt })
-} catch (err) {
-  window.close()
-}
+const jwt = await yivi.start()
 ```
 
 ## Email Encryption Flow
 
-With the session callback in place, the encryption flow in `onBeforeSend`:
+With the session callback in place, the encryption flow intercepts the compose send event:
 
 ```ts
 // background.ts
@@ -194,7 +234,7 @@ async function handleBeforeSend(tab, details) {
     attachments: await getComposeAttachments(tab.id),
   })
 
-  // 2. Build recipients
+  // 2. Build recipients from To and CC
   const recipients = [...details.to, ...details.cc].map((r) =>
     pg.recipient.email(extractEmail(r))
   )
@@ -231,6 +271,12 @@ async function handleBeforeSend(tab, details) {
 }
 ```
 
+The Thunderbird addon also stores a copy of sent encrypted messages in a "PostGuard Sent" folder in Local Folders.
+
+### BCC limitation
+
+PostGuard does not support BCC recipients. The Thunderbird addon blocks sending if any BCC recipients are present when encryption is enabled.
+
 ## Email Decryption Flow
 
 ```ts
@@ -260,17 +306,19 @@ async function handleDecryptMessage(messageId: number) {
   // 3. Decrypt with session callback
   const result = await pg.decrypt({
     data: ciphertext,
-    session: async ({ con, sort, hints }) => {
+    session: async ({ con, sort }) => {
       return createYiviPopup(con, sort)
     },
     recipient: recipientEmail,
   })
 
-  // 4. Parse and display the decrypted MIME
+  // 4. Parse the decrypted MIME and display
   const plaintext = new TextDecoder().decode(result.plaintext)
-  // ... parse MIME and display
+  // Use a MIME parser (e.g. postal-mime) to extract subject, body, attachments
 }
 ```
+
+The Thunderbird addon goes further: after decryption, it imports the decrypted message back into the folder (with threading headers preserved) and deletes the encrypted original. This makes the decrypted message appear naturally in the conversation.
 
 ## Detecting PostGuard Emails
 
@@ -279,7 +327,7 @@ Check if a message is PostGuard-encrypted by looking for the attachment or armor
 ```ts
 import { extractArmoredPayload } from '@e4a/pg-js'
 
-async function isPGEncrypted(msgId: number): Promise<boolean> {
+async function isPostGuardEncrypted(msgId: number): Promise<boolean> {
   // Check for postguard.encrypted attachment
   const attachments = await browser.messages.listAttachments(msgId)
   if (attachments.some((a) => a.name === 'postguard.encrypted')) {
@@ -297,30 +345,39 @@ async function isPGEncrypted(msgId: number): Promise<boolean> {
 }
 ```
 
-## Custom Headers
+## Reply Threading
 
-Inject PostGuard headers into sent emails for identification:
+The Thunderbird addon auto-enables encryption when the user replies to an encrypted message. It also injects threading headers (`In-Reply-To`, `References`) and an `X-PostGuard` marker into decrypted messages so they thread correctly in the mail client.
 
-```ts
-import { injectMimeHeaders } from '@e4a/pg-js'
+## Sender Identity Badges
 
-const mime = injectMimeHeaders(rawMime, {
-  'X-PostGuard': 'encrypted',
-  'X-PostGuard-Client-Version': 'pg4tb/0.8.0',
-})
-```
+After decryption, the addons display the sender's verified identity attributes as badges. The Thunderbird addon shows icons for different attribute types (envelope for email, phone for mobile, etc.) in a banner above the decrypted message content.
+
+## Outlook-Specific Notes
+
+The Outlook addon uses the Office JS API instead of WebExtension APIs:
+
+- Manifest: XML-based (`manifest.xml`) instead of `manifest.json`
+- Taskpane: decryption UI shown in a side panel when reading encrypted messages
+- Compose pane: encryption toggle and policy editor
+- Dialog: `Office.context.ui.displayDialogAsync()` for Yivi popups, with `messageParent()` to return JWTs
+- Event handlers: `OnMessageSend` for encryption, `OnMessageRead` for auto-decryption
+- State: `sessionStorage` for compose state (encryption toggle, policies, signing identity)
+
+The core encryption/decryption logic is the same. Only the UI plumbing and extension APIs differ.
 
 ## Bundling Considerations
 
 Email extension environments have specific bundling requirements:
 
-- **WASM loading**: Use the `wasm` constructor option with a pre-loaded module
-- **Dynamic imports**: Avoid them where possible; use static imports or extension-compatible loading patterns
-- **Content Security Policy**: Ensure your extension manifest allows WASM execution
-- **File size**: The `@e4a/pg-wasm` module is substantial; consider loading it asynchronously at startup rather than on first use
+- WASM loading: use the `wasm` constructor option with a pre-loaded module. Copy the WASM binary to your extension's output directory during build.
+- Dynamic imports: avoid where possible. Use static imports or extension-compatible loading patterns.
+- Content Security Policy: your extension manifest must allow WASM execution (`'wasm-unsafe-eval'` in Manifest V3).
+- File size: the `@e4a/pg-wasm` module is around 2 MB. Load it eagerly at startup rather than on first use.
+- EventSource polyfill: the Yivi client uses `EventSource` for server-sent events. In Thunderbird, you may need to shim this.
 
 ```ts
-// Load WASM eagerly at startup, not on first encrypt/decrypt
+// Load WASM eagerly at startup
 let pgWasm: WasmModule | null = null
 
 const wasmPromise = import(/* @vite-ignore */ './pg-wasm/load.js')
@@ -331,3 +388,13 @@ const wasmPromise = import(/* @vite-ignore */ './pg-wasm/load.js')
 await wasmPromise
 const pg = new PostGuard({ pkgUrl: PKG_URL, wasm: pgWasm! })
 ```
+
+### Build tool: esbuild
+
+The Thunderbird addon uses esbuild for bundling, with separate entry points for each component:
+
+- Background script: ESM format, `@e4a/pg-wasm` marked as external
+- Content scripts and popups: IIFE format for injection into pages
+- WASM binary: copied from `node_modules/@e4a/pg-wasm` to the output directory
+
+Environment variables (`PKG_URL`, `POSTGUARD_WEBSITE_URL`) are injected at build time via esbuild's `define` option.

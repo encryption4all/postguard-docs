@@ -1,6 +1,6 @@
 # SDK Overview
 
-The `@e4a/pg-js` package is the official JavaScript/TypeScript SDK for PostGuard identity-based encryption. It provides a high-level API for encrypting and decrypting data using identity-based attributes (such as email addresses) managed by a Private Key Generator (PKG).
+The `@e4a/pg-js` package is the official JavaScript/TypeScript SDK for PostGuard identity-based encryption. It provides a high-level API for encrypting and decrypting data using identity attributes (such as email addresses) managed by a Private Key Generator (PKG).
 
 ## Architecture
 
@@ -16,8 +16,9 @@ The SDK has three layers:
 |  - email.*  (MIME helpers)                        |
 +--------------------------------------------------+
 |  Crypto layer  (@e4a/pg-wasm)                     |
-|  - Stream sealing / unsealing                     |
-|  - Identity-based encryption primitives           |
+|  - sealStream / StreamUnsealer                    |
+|  - IBE primitives (CGWKV) + IBS (GG)             |
+|  - AES-128-GCM symmetric encryption              |
 +--------------------------------------------------+
 |  Backend services                                 |
 |  - PKG: key generation, Yivi session management   |
@@ -25,9 +26,9 @@ The SDK has three layers:
 +--------------------------------------------------+
 ```
 
-**PKG (Private Key Generator)** is the identity-based encryption server. It issues user secret keys after verifying identity attributes through Yivi, and provides master public keys for encryption.
+PKG (Private Key Generator) is the identity-based encryption server. It issues user secret keys after verifying identity attributes through Yivi, and provides the master public key for encryption.
 
-**Cryptify** is an optional file storage and email delivery service. It stores encrypted files and can send notification emails to recipients.
+Cryptify is an optional file storage and email delivery service. It stores encrypted files and can send notification emails to recipients.
 
 ## Constructor Options
 
@@ -35,8 +36,8 @@ The SDK has three layers:
 import { PostGuard } from '@e4a/pg-js'
 
 const pg = new PostGuard({
-  pkgUrl: 'https://pkg.postguard.eu',
-  cryptifyUrl: 'https://cryptify.postguard.eu',
+  pkgUrl: 'https://pkg.example.com',
+  cryptifyUrl: 'https://cryptify.example.com',
   headers: { 'X-Custom-Header': 'value' },
   wasm: preloadedWasmModule,
 })
@@ -49,22 +50,19 @@ The URL of the PKG server. All encryption and decryption operations communicate 
 ### `cryptifyUrl` (optional)
 
 The URL of the Cryptify file storage service. Required for:
-- `encryptAndUpload()` -- encrypt and store files
-- `encryptAndDeliver()` -- encrypt, store, and email
-- `decrypt({ uuid })` -- decrypt files by UUID
+- `encryptAndUpload()`: encrypt and store files
+- `encryptAndDeliver()`: encrypt, store, and send email notification
+- `decrypt({ uuid })`: decrypt files stored on Cryptify
 
-Not needed for `encrypt()` and `decrypt({ data })` which work with raw bytes.
+Not needed for `encrypt()` and `decrypt({ data })`, which work with raw bytes.
 
 ### `headers` (optional)
 
-Custom HTTP headers included in all requests to the PKG and Cryptify backends. Useful for:
-- Client version identification
-- Authorization tokens
-- Custom tracking headers
+Custom HTTP headers included in all requests to the PKG and Cryptify backends. Useful for client version identification or tracking.
 
 ```ts
 const pg = new PostGuard({
-  pkgUrl: 'https://pkg.postguard.eu',
+  pkgUrl: 'https://pkg.example.com',
   headers: {
     'X-PostGuard-Client-Version': 'MyApp/1.0',
   },
@@ -73,22 +71,22 @@ const pg = new PostGuard({
 
 ### `wasm` (optional)
 
-A pre-loaded `@e4a/pg-wasm` module. By default, the SDK dynamically imports `@e4a/pg-wasm` when needed. In environments where dynamic imports do not work (browser extensions, certain bundler configurations), you can pre-load the WASM module and pass it in:
+A pre-loaded `@e4a/pg-wasm` module. By default, the SDK dynamically imports `@e4a/pg-wasm` when needed. In environments where dynamic imports do not work (browser extensions, certain bundler configurations), pre-load the WASM module and pass it in:
 
 ```ts
 import * as pgWasm from '@e4a/pg-wasm'
 
 const pg = new PostGuard({
-  pkgUrl: 'https://pkg.postguard.eu',
+  pkgUrl: 'https://pkg.example.com',
   wasm: pgWasm,
 })
 ```
 
-See the [Custom Integrations](/integrations/custom) guide for more details on WASM loading strategies.
+The `wasm` option accepts any object that provides `sealStream` and `StreamUnsealer` matching the `@e4a/pg-wasm` interface. See [Custom Integration](/integrations/custom) for more WASM loading strategies.
 
 ## Builder Methods
 
-The `PostGuard` instance exposes builder methods for constructing sign methods and recipients. These return plain configuration objects -- no network calls are made until you pass them to an encrypt or decrypt method.
+The `PostGuard` instance exposes builder methods for constructing sign methods and recipients. These return plain configuration objects. No network calls happen until you pass them to an encrypt or decrypt method.
 
 ### `pg.sign.*`
 
@@ -105,7 +103,7 @@ See [Authentication Methods](/sdk/auth-methods) for details.
 | Method | Returns | Use case |
 |--------|---------|----------|
 | `pg.recipient.email(email)` | `EmailRecipient` | Encrypt for a specific email |
-| `pg.recipient.emailDomain(email)` | `EmailDomainRecipient` | Encrypt for an email domain (organisation) |
+| `pg.recipient.emailDomain(email)` | `EmailDomainRecipient` | Encrypt for anyone at a domain |
 | `pg.recipient.withPolicy(email, policy)` | `CustomPolicyRecipient` | Encrypt with custom attribute requirements |
 
 See [Encryption](/sdk/encryption) for recipient examples.
@@ -116,7 +114,7 @@ Email helper methods for building and parsing PostGuard-encrypted emails. See [E
 
 ## Exported Utilities
 
-Besides the `PostGuard` class, the package exports several standalone utilities:
+Besides the `PostGuard` class, the package exports standalone utilities:
 
 ```ts
 import {
@@ -127,7 +125,7 @@ import {
   DecryptionError,
   IdentityMismatchError,
 
-  // PKG API functions (for custom startup, caching)
+  // PKG API functions
   fetchMPK,
   fetchVerificationKey,
 
@@ -135,7 +133,6 @@ import {
   buildKeyRequest,
   sortPolicies,
   secondsTill4AM,
-  buildEncryptionPolicy,
 
   // Email helpers (also available via pg.email.*)
   buildMime,
@@ -144,5 +141,9 @@ import {
   extractCiphertext,
   extractArmoredPayload,
   armorBase64,
+  toUrlSafeBase64,
+
+  // Yivi session runner
+  runYiviSession,
 } from '@e4a/pg-js'
 ```

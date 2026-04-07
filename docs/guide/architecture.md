@@ -8,10 +8,19 @@ PostGuard consists of four main parts:
 
 | Component | Role | Required? |
 |---|---|---|
-| **PKG server** | Trusted server that holds the master key pair. Publishes the Master Public Key, verifies identities via Yivi, and issues decryption keys. | Yes |
-| **Yivi app** | Mobile identity wallet. Users prove they own an email address (or other attributes) by scanning a QR code. | Yes (for decryption and peer-to-peer signing) |
-| **Client SDK** (`@e4a/pg-js`) | JavaScript/TypeScript library that handles encryption, decryption, policy building, and communication with the PKG and Cryptify. | Yes |
-| **Cryptify** | File hosting service for encrypted files. Handles upload, download, and optional email notifications. | No -- you can deliver ciphertext yourself |
+| PKG server (`pg-pkg`) | Trusted server that holds the master key pair. Publishes the Master Public Key, verifies identities via Yivi, and issues decryption and signing keys. | Yes |
+| Yivi app | Mobile identity wallet. Users prove they own an email address (or other attributes) by scanning a QR code. | Yes (for decryption and peer-to-peer signing) |
+| Client SDK (`@e4a/pg-js`) | JavaScript/TypeScript library that handles encryption, decryption, policy building, and communication with the PKG and Cryptify. Uses `@e4a/pg-wasm` for cryptographic operations. | Yes |
+| Cryptify | File hosting service for encrypted files. Handles upload, download, and optional email notifications. | No, you can deliver ciphertext yourself |
+
+There are also client applications built on the SDK:
+
+| Application | Description |
+|---|---|
+| PostGuard website | SvelteKit web app for encrypting and sharing files via Cryptify |
+| Thunderbird addon (`pg4tb`) | Extension for Thunderbird 128+ that encrypts and decrypts emails |
+| Outlook addon | Office add-in that encrypts and decrypts emails in Outlook |
+| CLI tool (`pg-cli`) | Command-line tool for encrypting and decrypting files |
 
 ## Key Hierarchy
 
@@ -21,7 +30,7 @@ PostGuard's cryptography is built on a two-level key hierarchy:
 Master Key Pair (lives on the PKG server)
   |
   +-- Master Public Key (MPK)
-  |     Published at /v2/parameters
+  |     Published at GET /v2/parameters
   |     Fetched by senders before encryption
   |     Combined with recipient identity + timestamp to encrypt
   |
@@ -36,7 +45,18 @@ Master Key Pair (lives on the PKG server)
                     Used to decrypt ciphertext
 ```
 
-The essential property: anyone with the MPK can encrypt for any identity, but only the PKG can derive the USK needed to decrypt. The PKG only does so after verifying the recipient's identity through Yivi.
+The PKG also holds a separate IBS master key pair for Identity-Based Signatures (the GG scheme). This produces signing keys and a public verification key:
+
+```
+IBS Master Key Pair (lives on the PKG server)
+  |
+  +-- Verification Key
+  |     Published at GET /v2/sign/parameters
+  |     Used by recipients to verify sender signatures
+  |
+  +-- IBS Master Secret Key
+        Used to derive per-sender signing keys
+```
 
 ## Encryption Flow
 
@@ -53,7 +73,7 @@ Sender Application                    PKG Server
        |  2. POST /v2/irma/sign/key        |
        |  (with API key or Yivi JWT)       |
        |---------------------------------->|
-       |  <- Signing keys                  |
+       |  <- Signing keys (pub + priv)     |
        |<----------------------------------|
        |                                   |
        |  3. Build encryption policy       |
@@ -70,13 +90,13 @@ Sender Application                    PKG Server
        |<----------------------------------|
 ```
 
-**Step by step:**
+Step by step:
 
-1. The SDK fetches the **Master Public Key** from the PKG.
-2. The sender authenticates (via API key or Yivi) to obtain **signing keys** that embed their identity in the ciphertext.
-3. The SDK builds an **encryption policy** -- a mapping from each recipient's email to the attributes they must prove, plus a timestamp.
-4. The SDK **seals** the data using WebAssembly cryptography. The output is a binary blob that can only be decrypted by someone who satisfies the policy.
-5. Optionally, the ciphertext is **uploaded to Cryptify**, which returns a UUID link for the recipient.
+1. The SDK fetches the Master Public Key from the PKG. This is a single GET request. The result can be cached (the PKG supports ETags and Cache-Control headers).
+2. The sender authenticates (via API key or Yivi) to obtain signing keys that embed their identity in the ciphertext. The PKG returns both a public signing key and an optional private signing key.
+3. The SDK builds an encryption policy: a mapping from each recipient's identifier to the attributes they must prove, plus a timestamp for key expiry.
+4. The SDK seals the data using the `@e4a/pg-wasm` WebAssembly module. For files, the SDK creates a ZIP archive, then encrypts the ZIP stream. The output is a binary blob that can only be decrypted by someone who satisfies the policy.
+5. Optionally, the ciphertext is uploaded to Cryptify, which returns a UUID. Cryptify can also send email notifications to recipients.
 
 ## Decryption Flow
 
@@ -90,16 +110,14 @@ Recipient App         PKG Server         Yivi App (phone)
       |  (from Cryptify    |                     |
       |   or other source) |                     |
       |                    |                     |
-      |  2. Parse policy   |                     |
-      |  from ciphertext   |                     |
-      |  (extract required |                     |
-      |   attributes +     |                     |
-      |   timestamp)       |                     |
+      |  2. Parse header   |                     |
+      |  (extract policy   |                     |
+      |   + timestamp)     |                     |
       |                    |                     |
       |  3. POST /v2/request/start               |
-      |  (attribute request)                     |
+      |  (attribute disclosure request)          |
       |------------------->|                     |
-      |  <- session QR     |                     |
+      |  <- session data   |                     |
       |<-------------------|                     |
       |                    |                     |
       |  4. Display QR code                      |
@@ -116,7 +134,7 @@ Recipient App         PKG Server         Yivi App (phone)
       |<-------------------|                     |
       |                    |                     |
       |  7. GET /v2/irma/key/{timestamp}         |
-      |  (with JWT)        |                     |
+      |  (Authorization: Bearer <jwt>)           |
       |------------------->|                     |
       |  <- User Secret    |                     |
       |     Key (USK)      |                     |
@@ -127,62 +145,67 @@ Recipient App         PKG Server         Yivi App (phone)
       |  --> plaintext     |                     |
 ```
 
-**Step by step:**
+Step by step:
 
-1. The recipient obtains the ciphertext (downloaded from Cryptify, received as an email attachment, etc.).
-2. The SDK **parses the ciphertext header** to extract the policy: which attributes are required and what timestamp was used.
-3. The SDK **starts a Yivi session** via the PKG, requesting the attributes specified in the policy.
-4. The application **displays a QR code** (or triggers a deep link on mobile).
-5. The recipient **scans the QR code** with their Yivi app and approves the attribute disclosure.
-6. The SDK **retrieves a JWT** from the PKG that proves the Yivi session completed successfully.
-7. The SDK **requests the User Secret Key (USK)** from the PKG, passing the JWT and the timestamp from the ciphertext. The PKG verifies the proof and derives the USK.
-8. The SDK **unseals the ciphertext** using the USK, producing the original plaintext.
+1. The recipient obtains the ciphertext (downloaded from Cryptify, received as an email attachment, extracted from an HTML body, etc.).
+2. The SDK parses the ciphertext header to extract the policy: which attributes are required and what timestamp was used. It also extracts the sender's public identity if the message was signed.
+3. The SDK starts a Yivi session via the PKG, requesting the attributes specified in the policy.
+4. The application displays a QR code (or triggers a deep link on mobile).
+5. The recipient scans the QR code with their Yivi app and approves the attribute disclosure.
+6. The SDK retrieves a JWT from the PKG that proves the Yivi session completed successfully.
+7. The SDK requests the User Secret Key (USK) from the PKG, passing the JWT and the timestamp from the ciphertext. The PKG verifies the proof and derives the USK from its Master Secret Key.
+8. The SDK unseals the ciphertext using the USK, producing the original plaintext. It also verifies the sender's signature if one was present.
 
 ::: tip Streaming support
-Both encryption and decryption use streaming (ReadableStream/WritableStream), so large files are processed without loading everything into memory at once.
+Both encryption and decryption support streaming (`ReadableStream`/`WritableStream`), so large files are processed in chunks (256 KiB by default) without loading everything into memory at once.
 :::
 
-## API Endpoints Overview
+## API Endpoints
 
-The PKG server exposes the following endpoints:
+### PKG Server
 
-### Public Parameters
-
-| Method | Endpoint | Description |
-|---|---|---|
-| `GET` | `/v2/parameters` | Fetch the Master Public Key (MPK) |
-| `GET` | `/v2/sign/parameters` | Fetch the public verification key for signature checking |
-
-### Yivi Sessions
+#### Public Parameters
 
 | Method | Endpoint | Description |
 |---|---|---|
-| `POST` | `/v2/request/start` | Start a Yivi identity verification session |
-| `GET` | `/v2/request/jwt/{token}` | Retrieve the JWT result of a completed Yivi session |
+| `GET` | `/v2/parameters` | Fetch the Master Public Key (MPK). Supports ETag/Cache-Control caching. |
+| `GET` | `/v2/sign/parameters` | Fetch the public verification key for signature checking. |
 
-### Key Issuance
+#### Yivi Sessions
 
 | Method | Endpoint | Description |
 |---|---|---|
-| `GET` | `/v2/irma/key/{timestamp}` | Retrieve a User Secret Key (USK). Requires a valid JWT in the `Authorization` header. The `timestamp` must match the one embedded in the ciphertext. |
-| `POST` | `/v2/irma/sign/key` | Retrieve signing keys. Authenticate with either an API key (`Bearer` token) or a Yivi JWT. |
+| `POST` | `/v2/request/start` | Start a Yivi identity verification session. Accepts attribute disclosure requirements. |
+| `GET` | `/v2/request/jwt/{token}` | Retrieve the JWT result of a completed Yivi session. |
 
-### Cryptify (File Hosting)
+#### Key Issuance
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/v2/irma/key/{timestamp}` | Retrieve a User Secret Key (USK). Requires `Authorization: Bearer <jwt>`. The timestamp must match the one embedded in the ciphertext. |
+| `POST` | `/v2/irma/sign/key` | Retrieve signing keys. Authenticate with either an API key (`Bearer PG-API-...`) or a Yivi JWT. |
+
+#### Health
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/health` | Health check endpoint. |
+| `GET` | `/metrics` | Prometheus metrics endpoint. |
+
+::: warning Authentication
+The key issuance endpoints require a valid `Authorization: Bearer <jwt>` header. The JWT is obtained through a completed Yivi session (for end-users) or provided as an API key prefixed with `PG-API-` (for server-to-server use).
+:::
+
+### Cryptify Server
 
 | Method | Endpoint | Description |
 |---|---|---|
 | `POST` | `/fileupload/init` | Initialize a file upload. Returns a UUID and upload token. |
-| `PUT` | `/fileupload/{uuid}` | Upload a chunk. Uses `Content-Range` headers for offset tracking. |
+| `PUT` | `/fileupload/{uuid}` | Upload a chunk. Uses `Content-Range` headers for offset tracking. Requires `cryptifytoken` header. |
 | `POST` | `/fileupload/finalize/{uuid}` | Finalize the upload after all chunks are sent. |
 | `GET` | `/filedownload/{uuid}` | Download an encrypted file as a stream. |
 
-::: warning Authentication
-The PKG key endpoints require a valid `Authorization: Bearer <jwt>` header. The JWT is obtained through a completed Yivi session (for end-users) or provided directly via API key (for server-to-server / PostGuard for Business).
-:::
-
-## Putting It All Together
-
-Here is the full picture of how the components interact:
+## Component Diagram
 
 ```
 +-------------------+          +-------------------+
@@ -195,15 +218,16 @@ Here is the full picture of how the components interact:
          v                              v
 +-------------------+          +-------------------+
 |    PKG Server     |<-------->|     Yivi App      |
-|                   |  verify  |   (on phone)      |
-| - Holds MPK / MSK |  identity|                   |
-| - Issues USKs     |          | - Holds verified  |
-| - Issues sign keys|          |   attributes      |
-+-------------------+          +-------------------+
+|    (pg-pkg)       |  verify  |   (on phone)      |
+|                   |  identity|                   |
+| - Holds MPK / MSK |          | - Holds verified  |
+| - Issues USKs     |          |   attributes      |
+| - Issues sign keys|          +-------------------+
++-------------------+
          ^
          |
          v
-+-------------------+
++--------------------+
 | Cryptify (optional)|
 |                    |
 | - Stores encrypted |
@@ -213,4 +237,4 @@ Here is the full picture of how the components interact:
 +--------------------+
 ```
 
-The sender and recipient applications both use the `@e4a/pg-js` SDK. The sender only talks to the PKG (and optionally Cryptify). The recipient talks to the PKG, which in turn coordinates with the Yivi app on the recipient's phone to verify their identity before issuing a decryption key.
+The sender and recipient applications both use the `@e4a/pg-js` SDK, which internally uses `@e4a/pg-wasm` for cryptographic operations. The sender talks to the PKG (for parameters and signing keys) and optionally to Cryptify (for file hosting). The recipient talks to the PKG, which coordinates with the Yivi app on the recipient's phone to verify identity before issuing a decryption key.

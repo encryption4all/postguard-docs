@@ -29,7 +29,7 @@ try {
 }
 ```
 
-**Thrown when:** General SDK errors that do not fit a more specific category.
+Thrown when: general SDK errors that do not fit a more specific category.
 
 ## `NetworkError`
 
@@ -55,7 +55,7 @@ try {
 | `status` | `number` | HTTP status code |
 | `body` | `string` | Response body from the server |
 
-**Thrown when:**
+Thrown when:
 - The PKG server is unreachable or returns an error
 - The Cryptify server rejects an upload or download
 - Any backend HTTP request fails with a non-2xx status
@@ -72,7 +72,7 @@ try {
 
 ## `YiviNotInstalledError`
 
-Thrown when `pg.sign.yivi()` or `decrypt({ element })` is used but the required Yivi packages are not installed.
+Thrown when `pg.sign.yivi()` or `decrypt({ element })` is used but the required Yivi packages are not installed. The SDK attempts to dynamically import `@privacybydesign/yivi-core`, `@privacybydesign/yivi-client`, and `@privacybydesign/yivi-web`. If any import fails, this error is thrown.
 
 ```ts
 import { YiviNotInstalledError } from '@e4a/pg-js'
@@ -91,9 +91,7 @@ try {
 }
 ```
 
-**Thrown when:** The SDK attempts to dynamically import `@privacybydesign/yivi-core`, `@privacybydesign/yivi-client`, or `@privacybydesign/yivi-web` and the import fails.
-
-**Fix:** Install the Yivi packages:
+Fix: install the Yivi packages:
 
 ```sh
 npm install @privacybydesign/yivi-core @privacybydesign/yivi-client @privacybydesign/yivi-web
@@ -117,7 +115,7 @@ try {
 }
 ```
 
-**Thrown when:**
+Thrown when:
 - Neither `element` nor `session` is provided for decryption
 - Multiple recipients exist but no `recipient` parameter was given
 - The ciphertext is malformed or corrupted
@@ -138,7 +136,7 @@ try {
 
 ## `IdentityMismatchError`
 
-A subclass of `DecryptionError`. Thrown when the Yivi attributes proven by the user do not match the encryption policy embedded in the ciphertext.
+A subclass of `DecryptionError`. Thrown when the Yivi attributes proven by the user do not match the encryption policy embedded in the ciphertext. For example, the message was encrypted for `alice@example.com` but the user proved `bob@example.com`.
 
 ```ts
 import { IdentityMismatchError } from '@e4a/pg-js'
@@ -147,17 +145,14 @@ try {
   await pg.decrypt({ uuid: '...', element: '#yivi' })
 } catch (err) {
   if (err instanceof IdentityMismatchError) {
-    // "Identity mismatch: the Yivi attributes did not match the encryption policy."
     alert('You are not the intended recipient of this message.')
   }
 }
 ```
 
-**Thrown when:** The user proves their identity through Yivi, but the attributes do not match what the sender specified. For example, the message was encrypted for `alice@example.com` but the user proved `bob@example.com`.
-
 ## Recommended Pattern
 
-A comprehensive error handling pattern that covers all cases:
+A full error handling pattern that covers all cases:
 
 ```ts
 import {

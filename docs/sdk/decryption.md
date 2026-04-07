@@ -39,8 +39,8 @@ result.download('my-files.zip')
 const result = await pg.decrypt({
   uuid: 'abc123-def456-...',
   session: async (request) => {
-    // request.con  -- required attributes
-    // request.sort -- 'Decryption'
+    // request.con   -- required attributes
+    // request.sort  -- 'Decryption'
     // request.hints -- optional display hints
     const jwt = await myYiviHandler(request)
     return jwt
@@ -59,6 +59,8 @@ interface DecryptFileResult {
   download: (filename?: string) => void  // trigger browser download
 }
 ```
+
+The `download()` method creates a blob URL, triggers a click on a temporary anchor element, and cleans up after itself.
 
 ## Decrypt from Raw Data
 
@@ -125,13 +127,13 @@ const result = await pg.decrypt({
 
 When the ciphertext was encrypted for multiple recipients, the SDK needs to know which recipient key to use. There are three scenarios:
 
-**Single recipient** -- no `recipient` parameter needed. The SDK picks the only available key.
+Single recipient: no `recipient` parameter needed. The SDK picks the only available key.
 
 ```ts
 await pg.decrypt({ uuid: '...', element: '#yivi' })
 ```
 
-**Multiple recipients, known email** -- pass the `recipient` parameter:
+Multiple recipients, known email: pass the `recipient` parameter:
 
 ```ts
 await pg.decrypt({
@@ -141,7 +143,7 @@ await pg.decrypt({
 })
 ```
 
-**Multiple recipients, no match** -- the SDK throws a `DecryptionError` listing the available keys:
+Multiple recipients, no match: the SDK throws a `DecryptionError` listing the available keys:
 
 ```ts
 import { DecryptionError } from '@e4a/pg-js'
@@ -171,6 +173,8 @@ interface SenderIdentity {
 }
 ```
 
+The public identity is visible from the ciphertext header before decryption. The private identity (if present) is only available after successful decryption.
+
 Example:
 
 ```ts
@@ -191,7 +195,6 @@ Pass an `AbortSignal` to cancel an in-progress decryption:
 ```ts
 const controller = new AbortController()
 
-// Cancel after 30 seconds
 setTimeout(() => controller.abort(), 30_000)
 
 const result = await pg.decrypt({
@@ -205,9 +208,9 @@ const result = await pg.decrypt({
 
 Decryption can throw:
 
-- **`DecryptionError`** -- general decryption failure, or missing `element`/`session`
-- **`IdentityMismatchError`** -- the Yivi attributes did not match the encryption policy
-- **`NetworkError`** -- PKG or Cryptify communication failure
+- `DecryptionError`: general decryption failure, or missing `element`/`session`
+- `IdentityMismatchError`: the Yivi attributes did not match the encryption policy
+- `NetworkError`: PKG or Cryptify communication failure
 
 ```ts
 import { IdentityMismatchError, DecryptionError } from '@e4a/pg-js'

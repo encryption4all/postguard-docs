@@ -13,18 +13,18 @@ hero:
       text: Core Concepts
       link: /guide/concepts
     - theme: alt
-      text: Architecture
-      link: /guide/architecture
+      text: Getting Started
+      link: /guide/getting-started
 
 features:
   - title: No key exchange needed
-    details: Encrypt data using nothing more than the recipient's email address. There are no public keys to look up, no certificates to manage.
+    details: Encrypt data using nothing more than the recipient's email address. There are no public keys to look up and no certificates to manage.
   - title: Identity verification built in
-    details: Recipients prove they own their email address before they can decrypt. Sender identity can be verified too, so you always know who sent the message.
+    details: Recipients prove they own their email address (or other attributes) before they can decrypt. Sender identity can be verified too.
   - title: Time-limited keys
-    details: Decryption keys expire automatically, giving you control over how long encrypted data remains accessible.
+    details: Decryption keys expire automatically. Even if a key is compromised, it only works for a specific time window.
   - title: Works everywhere
-    details: The SDK runs in browsers and Node.js. Integrate PostGuard into web apps, email clients, or backend services.
+    details: The JavaScript SDK runs in browsers and Node.js. Addons exist for Thunderbird and Outlook. A CLI tool handles server-side and scripting use cases.
 ---
 
 ## Quick Start
@@ -32,7 +32,7 @@ features:
 Install the SDK:
 
 ```bash
-npm install @e4a/pg-js
+npm install @e4a/pg-js @e4a/pg-wasm
 ```
 
 Create a client and encrypt:
@@ -51,4 +51,4 @@ const encrypted = await pg.encrypt({
 })
 ```
 
-Read the [concepts guide](/guide/concepts) to understand how this works under the hood, or jump to the [architecture overview](/guide/architecture) to see all the moving parts.
+Read the [concepts guide](/guide/concepts) to understand how this works, or jump straight to [getting started](/guide/getting-started).

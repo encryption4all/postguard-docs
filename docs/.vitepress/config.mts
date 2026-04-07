@@ -3,7 +3,9 @@ import { defineConfig } from 'vitepress'
 export default defineConfig({
   title: 'PostGuard',
   description: 'End-to-end encryption using identity-based encryption and Yivi',
+  head: [['link', { rel: 'icon', href: '/pg_logo_no_text.svg' }]],
   themeConfig: {
+    logo: '/pg_logo_no_text.svg',
     nav: [
       { text: 'Guide', link: '/guide/what-is-postguard' },
       { text: 'SDK', link: '/sdk/overview' },

@@ -1,6 +1,6 @@
 # Email Helpers
 
-The SDK includes a set of email helper methods for building and parsing PostGuard-encrypted emails. These are available both as instance methods on `pg.email.*` and as standalone exports.
+The SDK includes email helper methods for building and parsing PostGuard-encrypted emails. These are available both as instance methods on `pg.email.*` and as standalone exports.
 
 ## Overview
 
@@ -23,7 +23,7 @@ Decrypting reverses the process:
 
 ## `buildMime()`
 
-Constructs a MIME message from structured input. Returns the raw MIME bytes as a `Uint8Array`.
+Constructs a MIME message from structured input. Returns the raw MIME bytes as a `Uint8Array`. The output includes proper headers (Date, MIME-Version, Content-Type, X-PostGuard) and handles multipart encoding for attachments.
 
 ```ts
 const mimeData = pg.email.buildMime({
@@ -59,15 +59,17 @@ const mimeData = pg.email.buildMime({
 | `date` | `Date` | No | Send date (defaults to now) |
 | `inReplyTo` | `string` | No | Message-ID of the email being replied to |
 | `references` | `string` | No | References header for threading |
-| `attachments` | `Array<{ name, type, data }>` | No | File attachments |
+| `attachments` | `Array<{ name, type, data }>` | No | File attachments (data as ArrayBuffer) |
 
 ::: tip
-Provide at least one of `htmlBody` or `plainTextBody`. If both are provided, the MIME message will include both as a `multipart/alternative` section.
+Provide at least one of `htmlBody` or `plainTextBody`. If both are provided, the MIME message includes both as a `multipart/alternative` section. If attachments are present, the message uses `multipart/mixed`.
 :::
 
 ## `createEnvelope()`
 
-Takes encrypted bytes and wraps them into an email envelope structure. The envelope contains a placeholder HTML body (informing the recipient to use PostGuard to decrypt), a plain text fallback, and the ciphertext as a file attachment.
+Takes encrypted bytes and wraps them into an email envelope structure. The envelope contains a placeholder HTML body (informing the recipient to use PostGuard to decrypt), a plain text fallback, and the ciphertext as a file attachment named `postguard.encrypted`.
+
+If the ciphertext is under 100 KB, the encrypted data is also embedded as an armored (base64-encoded) block in the HTML body. This allows email addons to extract the ciphertext directly from the HTML without needing the attachment.
 
 ```ts
 const envelope = pg.email.createEnvelope({
@@ -77,8 +79,8 @@ const envelope = pg.email.createEnvelope({
   unencryptedMessage: 'Encrypted via PostGuard', // optional
 })
 
-// envelope.subject       -- "PostGuard Encrypted Email" (or similar)
-// envelope.htmlBody      -- placeholder HTML with instructions
+// envelope.subject       -- "PostGuard Encrypted Email"
+// envelope.htmlBody      -- placeholder HTML with instructions + armored payload
 // envelope.plainTextBody -- plain text fallback
 // envelope.attachment    -- File object named "postguard.encrypted"
 ```
@@ -97,7 +99,7 @@ const envelope = pg.email.createEnvelope({
 ```ts
 interface EnvelopeResult {
   subject: string         // email subject line
-  htmlBody: string        // placeholder HTML body
+  htmlBody: string        // placeholder HTML body with armored payload
   plainTextBody: string   // plain text fallback
   attachment: File        // ciphertext as "postguard.encrypted"
 }
@@ -105,12 +107,12 @@ interface EnvelopeResult {
 
 ## `extractCiphertext()`
 
-Extracts the encrypted ciphertext from a received email. It checks two locations:
+Extracts the encrypted ciphertext from a received email. It checks two locations in order:
 
-1. **Attachments** -- looks for a file named `postguard.encrypted`
-2. **HTML body** -- looks for an armored (base64-encoded) payload embedded in the HTML
+1. Attachments: looks for a file named `postguard.encrypted`
+2. HTML body: looks for an armored payload between `-----BEGIN POSTGUARD MESSAGE-----` and `-----END POSTGUARD MESSAGE-----` markers
 
-Returns `null` if no ciphertext is found.
+Returns a `Uint8Array` with the ciphertext, or `null` if nothing is found.
 
 ```ts
 const ciphertext = pg.email.extractCiphertext({
@@ -134,11 +136,11 @@ if (ciphertext) {
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `htmlBody` | `string` | No | The HTML body of the received email |
-| `attachments` | `Array<{ name, data }>` | No | Email attachments |
+| `attachments` | `Array<{ name, data }>` | No | Email attachments (data as ArrayBuffer) |
 
 ## `injectMimeHeaders()`
 
-Adds or replaces headers in a raw MIME string. Useful for injecting PostGuard-specific headers or threading information after encryption.
+Adds or replaces headers in a raw MIME string. The function splits the MIME at the `\r\n\r\n` separator, processes the header section (including folded multi-line headers), and reassembles the result.
 
 ```ts
 const updatedMime = pg.email.injectMimeHeaders(
@@ -161,13 +163,13 @@ const updatedMime = pg.email.injectMimeHeaders(
 
 ## Full Encryption Workflow
 
-Here is the complete email encryption workflow as used in the Thunderbird addon:
+Here is the complete email encryption workflow as used by the Thunderbird addon:
 
 ```ts
 import { PostGuard } from '@e4a/pg-js'
 
 const pg = new PostGuard({
-  pkgUrl: 'https://pkg.postguard.eu',
+  pkgUrl: 'https://pkg.example.com',
 })
 
 // 1. Build the inner MIME message
@@ -197,7 +199,7 @@ const envelope = pg.email.createEnvelope({
 })
 
 // 4. Send using your email client/API
-// envelope.subject, envelope.htmlBody, envelope.attachment
+// Use: envelope.subject, envelope.htmlBody, envelope.attachment
 ```
 
 ## Full Decryption Workflow
@@ -225,7 +227,7 @@ const result = await pg.decrypt({
 
 // 3. Parse the decrypted MIME
 const mimeText = new TextDecoder().decode(result.plaintext)
-// Parse mimeText with your preferred MIME parser
+// Parse mimeText with your preferred MIME parser (e.g. postal-mime)
 
 // 4. Show sender identity
 if (result.sender) {
@@ -234,6 +236,18 @@ if (result.sender) {
   )
   console.log('Verified sender:', email?.v)
 }
+```
+
+## Additional Utilities
+
+The SDK also exports these lower-level email helpers:
+
+```ts
+import {
+  extractArmoredPayload,  // extract armored block from HTML string
+  armorBase64,            // wrap base64 string in BEGIN/END markers (76 chars/line)
+  toUrlSafeBase64,        // convert base64 to URL-safe variant (+ → -, / → _, strip =)
+} from '@e4a/pg-js'
 ```
 
 ## Standalone Exports
@@ -248,6 +262,7 @@ import {
   extractCiphertext,
   extractArmoredPayload,
   armorBase64,
+  toUrlSafeBase64,
 } from '@e4a/pg-js'
 ```
 

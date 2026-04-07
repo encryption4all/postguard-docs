@@ -10,27 +10,34 @@ The SDK provides three encryption methods, each suited to a different use case.
 
 ## Recipients
 
-Before encrypting, build one or more recipients:
+Before encrypting, build one or more recipients. PostGuard can encrypt with any wallet attribute. Email is the most common, but you can also target recipients by name, BSN, domain, or any other verified attribute.
 
 ```ts
-// Encrypt for a specific email address
+// Encrypt for a specific email address (most common)
 const alice = pg.recipient.email('alice@example.com')
 
 // Encrypt for anyone at a domain (organisation-level)
 const org = pg.recipient.emailDomain('bob@company.nl')
 
-// Encrypt with custom attribute requirements
+// Encrypt for a specific BSN (citizen service number)
+const bsnRecipient = pg.recipient.withPolicy('recipient-id', [
+  { t: 'pbdf.gemeente.personalData.bsn', v: '999999999' },
+])
+
+// Encrypt with multiple attribute requirements
 const custom = pg.recipient.withPolicy('carol@example.com', [
   { t: 'pbdf.sidn-pbdf.email.email', v: 'carol@example.com' },
   { t: 'pbdf.gemeente.personalData.fullname', v: 'Carol Smith' },
 ])
 ```
 
-You can pass multiple recipients to any encryption method. Each recipient gets their own decryption policy embedded in the ciphertext.
+You can pass multiple recipients to any encryption method. Each recipient gets their own decryption policy embedded in the ciphertext header, so each can decrypt independently.
+
+Under the hood, `pg.recipient.email()` creates a policy with the attribute type `pbdf.sidn-pbdf.email.email`, while `pg.recipient.emailDomain()` extracts the domain from the email and uses `pbdf.sidn-pbdf.email.domain`.
 
 ## `encrypt()`
 
-Encrypts raw data and returns the ciphertext as a `Uint8Array`. No files are uploaded to Cryptify.
+Encrypts raw data and returns the ciphertext as a `Uint8Array`. No files are uploaded.
 
 ```ts
 const plaintext = new TextEncoder().encode('Confidential message')
@@ -44,9 +51,17 @@ const ciphertext = await pg.encrypt({
 })
 ```
 
+### Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `sign` | `SignMethod` | Yes | Authentication method |
+| `recipients` | `Recipient[]` | Yes | One or more recipients |
+| `data` | `Uint8Array \| ReadableStream<Uint8Array>` | Yes | Data to encrypt |
+
 ### Streaming input
 
-You can also pass a `ReadableStream<Uint8Array>` as `data` for large payloads:
+You can pass a `ReadableStream<Uint8Array>` as `data` for large payloads:
 
 ```ts
 const stream = file.stream() // ReadableStream from a File object
@@ -58,15 +73,15 @@ const ciphertext = await pg.encrypt({
 })
 ```
 
-### Use cases
+### When to use
 
 - Email encryption (encrypt the inner MIME, then wrap in an envelope)
 - Encrypting data in memory without external storage
-- Custom storage backends
+- Custom storage or transport backends
 
 ## `encryptAndUpload()`
 
-Encrypts one or more files and uploads them to Cryptify. Returns a UUID that recipients can use to download and decrypt.
+Encrypts one or more files and uploads them to Cryptify. The files are bundled into a ZIP archive, encrypted, and streamed to Cryptify in chunks (1 MB by default). Returns a UUID that recipients can use to download and decrypt.
 
 ::: warning
 Requires `cryptifyUrl` to be set in the constructor.
@@ -86,7 +101,7 @@ const result = await pg.encryptAndUpload({
   onProgress: (percentage) => {
     progressBar.style.width = `${percentage}%`
   },
-  signal: abortController.signal, // optional AbortSignal
+  signal: abortController.signal, // optional
 })
 
 console.log('Share this UUID:', result.uuid)
@@ -94,13 +109,13 @@ console.log('Share this UUID:', result.uuid)
 
 ### Parameters
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `sign` | `SignMethod` | Authentication method |
-| `recipients` | `Recipient[]` | One or more recipients |
-| `files` | `File[] \| FileList` | Files to encrypt |
-| `onProgress` | `(pct: number) => void` | Upload progress callback (0-100) |
-| `signal` | `AbortSignal` | Cancel the operation |
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `sign` | `SignMethod` | Yes | Authentication method |
+| `recipients` | `Recipient[]` | Yes | One or more recipients |
+| `files` | `File[] \| FileList` | Yes | Files to encrypt |
+| `onProgress` | `(pct: number) => void` | No | Upload progress callback (0-100) |
+| `signal` | `AbortSignal` | No | Cancel the operation |
 
 ## `encryptAndDeliver()`
 
@@ -115,8 +130,8 @@ const result = await pg.encryptAndDeliver({
   files: [myFile],
   delivery: {
     message: 'Please find the encrypted documents attached.',
-    language: 'EN',        // 'EN' or 'NL'
-    confirmToSender: true, // send a copy to the sender
+    language: 'EN',
+    confirmToSender: true,
   },
 })
 ```
@@ -149,9 +164,9 @@ const result = await pg.encryptAndUpload({
 
 All encryption methods can throw:
 
-- **`PostGuardError`** -- general SDK error
-- **`NetworkError`** -- PKG or Cryptify communication failure
-- **`YiviNotInstalledError`** -- Yivi packages not installed (when using `pg.sign.yivi`)
+- `PostGuardError`: general SDK error
+- `NetworkError`: PKG or Cryptify communication failure (includes `status` and `body` properties)
+- `YiviNotInstalledError`: Yivi packages not installed (when using `pg.sign.yivi`)
 
 ```ts
 import { NetworkError, YiviNotInstalledError } from '@e4a/pg-js'

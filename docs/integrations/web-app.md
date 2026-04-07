@@ -1,14 +1,31 @@
 # Web Application Integration
 
-This guide shows how to integrate PostGuard encryption and decryption into a web application. The examples use SvelteKit, but the patterns apply to any frontend framework.
+This guide shows how to integrate PostGuard encryption and decryption into a web application. The examples use SvelteKit (matching the [postguard-examples](https://github.com/encryption4all) repository), but the patterns apply to any frontend framework.
 
 ## Setup
 
-Install the SDK and Yivi packages:
+Install the SDK, WASM module, and Yivi packages:
 
 ```sh
 npm install @e4a/pg-js @e4a/pg-wasm
 npm install @privacybydesign/yivi-core @privacybydesign/yivi-client @privacybydesign/yivi-web
+```
+
+You also need Vite plugins for WASM support:
+
+```sh
+npm install -D vite-plugin-wasm vite-plugin-top-level-await
+```
+
+```ts
+// vite.config.ts
+import { sveltekit } from '@sveltejs/kit/vite'
+import wasm from 'vite-plugin-wasm'
+import topLevelAwait from 'vite-plugin-top-level-await'
+
+export default {
+  plugins: [sveltekit(), wasm(), topLevelAwait()],
+}
 ```
 
 Create a shared PostGuard instance:
@@ -18,55 +35,47 @@ Create a shared PostGuard instance:
 import { PostGuard } from '@e4a/pg-js'
 
 export const pg = new PostGuard({
-  pkgUrl: 'https://pkg.postguard.eu',
-  cryptifyUrl: 'https://cryptify.postguard.eu',
+  pkgUrl: import.meta.env.VITE_PKG_URL,
+  cryptifyUrl: import.meta.env.VITE_CRYPTIFY_URL,
 })
 ```
 
 ## Encrypt and Upload Files
 
-A SvelteKit component that encrypts files and uploads them to Cryptify:
+A SvelteKit component that encrypts files and uploads them to Cryptify. This example uses `encryptAndDeliver()` with an API key, matching the PostGuard for Business pattern:
 
 ```svelte
-<!-- src/routes/encrypt/+page.svelte -->
+<!-- src/routes/send/+page.svelte -->
 <script lang="ts">
   import { pg } from '$lib/postguard'
-  import { IdentityMismatchError, NetworkError } from '@e4a/pg-js'
+  import { NetworkError } from '@e4a/pg-js'
 
-  let files: FileList | null = null
-  let recipients = ''
-  let senderEmail = ''
-  let progress = 0
-  let resultUuid = ''
-  let error = ''
+  let files = $state<FileList | null>(null)
+  let recipientEmail = $state('')
+  let apiKey = $state('')
+  let progress = $state(0)
+  let error = $state('')
+  let done = $state(false)
 
-  async function handleEncrypt() {
-    if (!files || !senderEmail || !recipients) return
+  async function handleSend() {
+    if (!files || !recipientEmail || !apiKey) return
 
     error = ''
-    resultUuid = ''
+    done = false
     progress = 0
 
     try {
-      const recipientList = recipients
-        .split(',')
-        .map((e) => e.trim())
-        .filter(Boolean)
-        .map((e) => pg.recipient.email(e))
-
-      const result = await pg.encryptAndUpload({
-        sign: pg.sign.yivi({
-          element: '#yivi-qr',
-          senderEmail,
-        }),
-        recipients: recipientList,
+      await pg.encryptAndDeliver({
+        sign: pg.sign.apiKey(apiKey),
+        recipients: [pg.recipient.email(recipientEmail)],
         files,
-        onProgress: (pct) => {
-          progress = pct
+        onProgress: (pct) => { progress = pct },
+        delivery: {
+          language: 'EN',
+          confirmToSender: false,
         },
       })
-
-      resultUuid = result.uuid
+      done = true
     } catch (err) {
       if (err instanceof NetworkError) {
         error = `Server error (${err.status}). Please try again.`
@@ -77,17 +86,17 @@ A SvelteKit component that encrypts files and uploads them to Cryptify:
   }
 </script>
 
-<h1>Encrypt Files</h1>
+<h1>Send Encrypted Files</h1>
 
-<form on:submit|preventDefault={handleEncrypt}>
+<form onsubmit={(e) => { e.preventDefault(); handleSend() }}>
   <label>
-    Your email
-    <input type="email" bind:value={senderEmail} required />
+    Recipient email
+    <input type="email" bind:value={recipientEmail} required />
   </label>
 
   <label>
-    Recipients (comma-separated)
-    <input type="text" bind:value={recipients} required />
+    API Key
+    <input type="text" bind:value={apiKey} required />
   </label>
 
   <label>
@@ -95,26 +104,43 @@ A SvelteKit component that encrypts files and uploads them to Cryptify:
     <input type="file" bind:files multiple required />
   </label>
 
-  <div id="yivi-qr"></div>
-
-  <button type="submit">Encrypt & Upload</button>
+  <button type="submit">Encrypt & Send</button>
 </form>
 
-{#if progress > 0 && !resultUuid}
+{#if progress > 0 && !done}
   <progress value={progress} max="100">{progress}%</progress>
 {/if}
 
-{#if resultUuid}
-  <div class="success">
-    <p>Encrypted successfully!</p>
-    <p>Share this link with recipients:</p>
-    <code>https://cryptify.postguard.eu/d/{resultUuid}</code>
-  </div>
+{#if done}
+  <p>Files encrypted and sent to {recipientEmail}.</p>
 {/if}
 
 {#if error}
-  <div class="error">{error}</div>
+  <p class="error">{error}</p>
 {/if}
+```
+
+### Using Yivi signing (peer-to-peer)
+
+If you want the sender to prove their identity via Yivi instead of an API key:
+
+```ts
+await pg.encryptAndUpload({
+  sign: pg.sign.yivi({
+    element: '#yivi-qr',
+    senderEmail: 'sender@example.com',
+    includeSender: true,
+  }),
+  recipients: [pg.recipient.email('alice@example.com')],
+  files: selectedFiles,
+  onProgress: (pct) => { progress = pct },
+})
+```
+
+Add a container element for the QR code:
+
+```html
+<div id="yivi-qr" style="min-height: 300px"></div>
 ```
 
 ## Decrypt Files
@@ -122,9 +148,8 @@ A SvelteKit component that encrypts files and uploads them to Cryptify:
 A component that decrypts files from a Cryptify UUID:
 
 ```svelte
-<!-- src/routes/decrypt/[uuid]/+page.svelte -->
+<!-- src/routes/download/+page.svelte -->
 <script lang="ts">
-  import { page } from '$app/stores'
   import { pg } from '$lib/postguard'
   import {
     IdentityMismatchError,
@@ -132,18 +157,25 @@ A component that decrypts files from a Cryptify UUID:
     NetworkError,
   } from '@e4a/pg-js'
 
-  let result: Awaited<ReturnType<typeof pg.decrypt>> | null = null
-  let error = ''
-  let senderEmail = ''
+  let result = $state<Awaited<ReturnType<typeof pg.decrypt>> | null>(null)
+  let error = $state('')
+  let senderEmail = $state('')
+
+  // Read UUID from URL query parameter
+  const params = new URLSearchParams(window.location.search)
+  const uuid = params.get('uuid')
+  const recipient = params.get('recipient')
 
   async function handleDecrypt() {
+    if (!uuid) return
     error = ''
     result = null
 
     try {
       const decrypted = await pg.decrypt({
-        uuid: $page.params.uuid,
-        element: '#yivi-qr',
+        uuid,
+        element: '#yivi-web',
+        recipient: recipient || undefined,
       })
 
       result = decrypted
@@ -154,6 +186,11 @@ A component that decrypts files from a Cryptify UUID:
           (a) => a.t === 'pbdf.sidn-pbdf.email.email'
         )
         senderEmail = emailAttr?.v ?? 'Unknown'
+      }
+
+      // Auto-download the decrypted files
+      if ('download' in decrypted) {
+        decrypted.download()
       }
     } catch (err) {
       if (err instanceof IdentityMismatchError) {
@@ -173,52 +210,23 @@ A component that decrypts files from a Cryptify UUID:
 
 <h1>Decrypt Files</h1>
 
-<div id="yivi-qr"></div>
+<div id="yivi-web" style="min-height: 300px"></div>
 
-<button on:click={handleDecrypt}>Decrypt</button>
+<button onclick={handleDecrypt}>Decrypt</button>
 
 {#if result && 'files' in result}
-  <div class="success">
+  <div>
     <p>Sent by: {senderEmail}</p>
-    <p>Files:</p>
-    <ul>
-      {#each result.files as file}
-        <li>{file}</li>
-      {/each}
-    </ul>
-    <button on:click={() => result?.download('decrypted.zip')}>
-      Download All
+    <p>Files: {result.files.join(', ')}</p>
+    <button onclick={() => result?.download('decrypted.zip')}>
+      Download Again
     </button>
   </div>
 {/if}
 
 {#if error}
-  <div class="error">{error}</div>
+  <p class="error">{error}</p>
 {/if}
-```
-
-## Encrypt and Deliver via Email
-
-If you want Cryptify to send notification emails to recipients automatically:
-
-```ts
-const result = await pg.encryptAndDeliver({
-  sign: pg.sign.yivi({
-    element: '#yivi-qr',
-    senderEmail: 'sender@example.com',
-    includeSender: true,
-  }),
-  recipients: [
-    pg.recipient.email('alice@example.com'),
-    pg.recipient.email('bob@example.com'),
-  ],
-  files: selectedFiles,
-  delivery: {
-    message: 'Here are the documents you requested.',
-    language: 'EN',
-    confirmToSender: true,
-  },
-})
 ```
 
 ## Custom Policies
@@ -232,9 +240,20 @@ const recipients = [
     { t: 'pbdf.sidn-pbdf.email.email', v: 'alice@example.com' },
     { t: 'pbdf.gemeente.personalData.fullname', v: 'Alice Smith' },
   ]),
+
   // Organisation-level: anyone with a @company.nl email can decrypt
   pg.recipient.emailDomain('info@company.nl'),
 ]
+```
+
+You can also require additional attributes like mobile number or date of birth:
+
+```ts
+pg.recipient.withPolicy('alice@example.com', [
+  { t: 'pbdf.sidn-pbdf.email.email', v: 'alice@example.com' },
+  { t: 'pbdf.sidn-pbdf.mobilenumber.mobilenumber', v: '+31612345678' },
+  { t: 'pbdf.gemeente.personalData.dateofbirth', v: '1990-01-15' },
+])
 ```
 
 ## Yivi QR Styling
@@ -242,7 +261,7 @@ const recipients = [
 The Yivi QR container needs some CSS to render properly. Import the Yivi CSS or add minimal styles:
 
 ```css
-#yivi-qr {
+#yivi-qr, #yivi-web {
   min-height: 300px;
   display: flex;
   align-items: center;
@@ -256,30 +275,52 @@ The SDK uses browser APIs (`File`, `ReadableStream`, `WritableStream`) and WebAs
 
 ```svelte
 <script lang="ts">
-  import { browser } from '$app/environment'
   import { onMount } from 'svelte'
+  import type { PostGuard } from '@e4a/pg-js'
 
-  let pg: PostGuard | null = null
+  let pg = $state<PostGuard | null>(null)
 
   onMount(async () => {
     const { PostGuard } = await import('@e4a/pg-js')
     pg = new PostGuard({
-      pkgUrl: 'https://pkg.postguard.eu',
-      cryptifyUrl: 'https://cryptify.postguard.eu',
+      pkgUrl: import.meta.env.VITE_PKG_URL,
+      cryptifyUrl: import.meta.env.VITE_CRYPTIFY_URL,
     })
   })
 </script>
 ```
 
-Alternatively, use dynamic imports in your shared module:
+Alternatively, create a lazy-loading helper:
 
 ```ts
 // src/lib/postguard.ts
+let instance: PostGuard | null = null
+
 export async function getPostGuard() {
-  const { PostGuard } = await import('@e4a/pg-js')
-  return new PostGuard({
-    pkgUrl: 'https://pkg.postguard.eu',
-    cryptifyUrl: 'https://cryptify.postguard.eu',
-  })
+  if (!instance) {
+    const { PostGuard } = await import('@e4a/pg-js')
+    instance = new PostGuard({
+      pkgUrl: import.meta.env.VITE_PKG_URL,
+      cryptifyUrl: import.meta.env.VITE_CRYPTIFY_URL,
+    })
+  }
+  return instance
 }
+```
+
+## Environment Variables
+
+Configure the PKG and Cryptify URLs via environment variables:
+
+```sh
+# .env
+VITE_PKG_URL=https://pkg.staging.yivi.app
+VITE_CRYPTIFY_URL=https://fileshare.staging.yivi.app
+```
+
+For API key authentication, keep the key server-side only:
+
+```ts
+// src/lib/config.server.ts (SvelteKit server-only module)
+export const PG_API_KEY = process.env.PG_API_KEY
 ```

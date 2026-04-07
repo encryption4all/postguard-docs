@@ -12,10 +12,10 @@ PostGuard requires the sender to prove their identity before encrypting. The SDK
 
 ## API Key
 
-The simplest method. Uses a pre-shared API key to authenticate with the PKG. Suitable for server-side applications or trusted client environments where you don't need interactive identity verification.
+The simplest method. Uses a pre-shared API key (prefixed with `PG-API-`) to authenticate with the PKG. Suitable for server-side applications or trusted client environments where you don't need interactive identity verification.
 
 ```ts
-const sign = pg.sign.apiKey('your-api-key')
+const sign = pg.sign.apiKey('PG-API-your-key-here')
 
 await pg.encrypt({
   sign,
@@ -24,13 +24,15 @@ await pg.encrypt({
 })
 ```
 
+The SDK sends the API key as a `Bearer` token in the `Authorization` header when requesting signing keys from the PKG at `POST /v2/irma/sign/key`.
+
 ::: info
 API keys are part of PostGuard for Business. Contact your PKG administrator to obtain one.
 :::
 
 ### When to use
 
-- Backend services that send encrypted emails
+- Backend services that send encrypted emails or files
 - Automated workflows
 - Environments where Yivi is not available
 - Development and testing
@@ -41,7 +43,7 @@ Runs an interactive Yivi session directly in the browser. The SDK renders a QR c
 
 ```ts
 const sign = pg.sign.yivi({
-  element: '#yivi-qr',            // CSS selector for the QR container
+  element: '#yivi-qr',
   senderEmail: 'sender@example.com',
   includeSender: true,            // optional: include sender as recipient
 })
@@ -61,7 +63,7 @@ The Yivi web packages must be installed:
 npm install @privacybydesign/yivi-core @privacybydesign/yivi-client @privacybydesign/yivi-web
 ```
 
-If they are not installed, the SDK throws a `YiviNotInstalledError`.
+If they are not installed, the SDK throws a `YiviNotInstalledError` when you try to use this method.
 
 ### DOM element
 
@@ -74,6 +76,8 @@ The `element` parameter is a CSS selector pointing to a container where the Yivi
 ```ts
 pg.sign.yivi({ element: '#yivi-qr', senderEmail: 'sender@example.com' })
 ```
+
+The container should have at least 300px height to display the QR code properly.
 
 ### Parameters
 
@@ -91,7 +95,7 @@ pg.sign.yivi({ element: '#yivi-qr', senderEmail: 'sender@example.com' })
 
 ## Session Callback
 
-The most flexible method. You provide a callback function that receives a session request and must return a JWT. This lets you handle the Yivi session yourself -- in a popup window, a separate process, or any custom flow.
+The most flexible method. You provide a callback function that receives a session request and must return a JWT string. This lets you handle the Yivi session yourself: in a popup window, a separate process, or any custom flow.
 
 ```ts
 const sign = pg.sign.session(
@@ -126,10 +130,8 @@ In a Thunderbird or Outlook extension, you typically open a popup window to show
 const sign = pg.sign.session(
   async (request) => {
     return new Promise((resolve, reject) => {
-      // Open a popup window
       const popup = window.open('/yivi-popup.html')
 
-      // Listen for the result
       window.addEventListener('message', (event) => {
         if (event.data.type === 'yivi-jwt') {
           resolve(event.data.jwt)
@@ -138,7 +140,6 @@ const sign = pg.sign.session(
         }
       }, { once: true })
 
-      // Pass the session request to the popup
       popup.postMessage({ type: 'yivi-request', request })
     })
   },
@@ -148,29 +149,43 @@ const sign = pg.sign.session(
 
 ### Thunderbird extension pattern
 
-The Thunderbird addon uses browser extension messaging to bridge between the background script and a popup:
+The Thunderbird addon uses `browser.windows.create()` to open a popup and `browser.runtime.sendMessage()` to exchange data:
 
 ```ts
 // Background script
 const sign = pg.sign.session(
   async ({ con, sort }) => {
-    // Open popup and wait for JWT
     return createYiviPopup(con, sort)
   },
   { senderEmail: fromEmail }
 )
 
-// The createYiviPopup function opens a browser.windows.create()
-// popup and resolves when the popup sends back a JWT via
+// createYiviPopup opens a browser.windows.create() popup
+// and resolves when the popup sends back a JWT via
 // browser.runtime.sendMessage()
 ```
 
 See the [Email Addon Integration](/integrations/email-addon) guide for the full pattern.
 
+### Yivi session runner utility
+
+The SDK exports a `runYiviSession()` function that handles the full Yivi session flow (start session, render QR, wait for result, get JWT). This is useful in popup windows:
+
+```ts
+import { runYiviSession } from '@e4a/pg-js'
+
+const jwt = await runYiviSession({
+  pkgUrl: 'https://pkg.example.com',
+  element: '#yivi-qr',
+  constraints: request.con,
+  sort: request.sort,
+})
+```
+
 ### When to use
 
 - Browser extensions (Thunderbird, Outlook, Chrome)
-- Environments where DOM-based Yivi rendering is not possible
+- Environments where DOM-based Yivi rendering is not possible in the main context
 - Custom Yivi flows (mobile apps, CLI tools)
 - Server-mediated Yivi sessions
 
