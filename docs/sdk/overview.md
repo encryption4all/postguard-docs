@@ -34,12 +34,29 @@ Cryptify is an optional file storage and email delivery service. It stores encry
 
 The SvelteKit example initializes PostGuard with a PKG URL and Cryptify URL from environment variables:
 
-<<< @/snippets/postguard-examples/pg-sveltekit/src/lib/postguard/encryption.ts{1-5 ts}
+```ts
+import type { ISealOptions } from '@e4a/pg-wasm';
+import type { CitizenRecipient, OrganisationRecipient } from '$lib/types';
+import { PKG_URL, UPLOAD_CHUNK_SIZE } from '$lib/config';
+import Chunker, { withTransform } from './chunker';
+import { createFileReadable, getFileStoreStream } from './file-provider';
+```
 
+<small>[Source: encryption.ts#L1-L5](https://github.com/encryption4all/postguard-examples/blob/6d538923ade9b013222685bec1f4588f610ccf86/pg-sveltekit/src/lib/postguard/encryption.ts#L1-L5)</small>
 The Thunderbird addon passes additional options for custom headers and a pre-loaded WASM module:
 
-<<< @/snippets/postguard-tb-addon/src/background/background.ts{199-206 ts}
+```ts
+    // Clean up compose tab state
+    composeTabs.delete(tab.id);
+  }
+});
 
+browser.windows.onCreated.addListener(async (window) => {
+  if (window.type === "messageCompose") {
+    const tabs = await browser.tabs.query({ windowId: window.id });
+```
+
+<small>[Source: background.ts#L199-L206](https://github.com/encryption4all/postguard-tb-addon/blob/d2ec84d26ab52044c3057dd3aeb7c8e1e3bc26ce/src/background/background.ts#L199-L206)</small>
 ### Options
 
 | Option | Type | Required | Description |

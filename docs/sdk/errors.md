@@ -75,12 +75,33 @@ A subclass of `DecryptionError`. Thrown when the Yivi attributes proven by the u
 
 The SvelteKit download page handles all decryption error types:
 
-<<< @/snippets/postguard-examples/pg-sveltekit/src/routes/download/+page.svelte{56-64 ts}
+```ts
+			if (!uuid) return;
+		}
+		dlState = 'loading';
 
+		try {
+			unsealer = await createUnsealer(uuid);
+			policies = unsealer.inspect_header();
+
+			try {
+```
+
+<small>[Source: +page.svelte#L56-L64](https://github.com/encryption4all/postguard-examples/blob/6d538923ade9b013222685bec1f4588f610ccf86/pg-sveltekit/src/routes/download/+page.svelte#L56-L64)</small>
 The Thunderbird addon handles errors in the decryption flow:
 
-<<< @/snippets/postguard-tb-addon/src/background/background.ts{798-805 ts}
+```ts
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      createReadable = async () =>
+        new ReadableStream<Uint8Array>({
+          start(controller) {
+            controller.enqueue(bytes);
+            controller.close();
+          },
+```
 
+<small>[Source: background.ts#L798-L805](https://github.com/encryption4all/postguard-tb-addon/blob/d2ec84d26ab52044c3057dd3aeb7c8e1e3bc26ce/src/background/background.ts#L798-L805)</small>
 ::: tip
 Always check for the most specific error first (`IdentityMismatchError`) and work up to the most general (`PostGuardError`), since they form an inheritance chain.
 :::

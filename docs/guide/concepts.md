@@ -142,12 +142,43 @@ This means: "The recipient must prove they own `alice@example.com` AND disclose 
 
 The SDK provides helper methods that build these policies automatically. The SvelteKit example uses `pg.recipient.email()` and `pg.recipient.emailDomain()`:
 
-<<< @/snippets/postguard-examples/pg-sveltekit/src/lib/postguard/encryption.ts{20-31 ts}
+```ts
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${apiKey}`
+		},
+		body: JSON.stringify({
+			pubSignId: [{ t: 'pbdf.sidn-pbdf.email.email' }]
+		})
+	});
+	if (!response.ok) {
+		const text = await response.text();
+		throw new Error(`Failed to fetch signing keys: ${response.status} ${text}`);
+```
 
+<small>[Source: encryption.ts#L20-L31](https://github.com/encryption4all/postguard-examples/blob/6d538923ade9b013222685bec1f4588f610ccf86/pg-sveltekit/src/lib/postguard/encryption.ts#L20-L31)</small>
 The Thunderbird addon uses `pg.recipient.withPolicy()` for custom per-recipient policies:
 
-<<< @/snippets/postguard-tb-addon/src/background/background.ts{362-376 ts}
+```ts
+      const timestamp = Math.round(date.getTime() / 1000);
 
+      // Build attachments list
+      const composeAttachments = await browser.compose.listAttachments(tab.id);
+      const attachmentData = await Promise.all(
+        composeAttachments.map(async (att) => {
+          const file = await browser.compose.getAttachmentFile(att.id) as unknown as File;
+          return {
+            name: file.name,
+            type: file.type,
+            data: await file.arrayBuffer(),
+          };
+        })
+      );
+
+```
+
+<small>[Source: background.ts#L362-L376](https://github.com/encryption4all/postguard-tb-addon/blob/d2ec84d26ab52044c3057dd3aeb7c8e1e3bc26ce/src/background/background.ts#L362-L376)</small>
 ::: info Attribute identifiers
 Attribute identifiers like `pbdf.sidn-pbdf.email.email` follow the Yivi attribute scheme. `pbdf` is the scheme, `sidn-pbdf` is the issuer, `email` is the credential, and the final `email` is the specific attribute within that credential.
 :::
@@ -181,8 +212,19 @@ For automated or server-side encryption, an API key replaces the Yivi step. The 
 
 When the recipient decrypts, the SDK returns a `sender` object containing the verified identity attributes of the sender. The Thunderbird addon extracts sender attributes to build identity badges:
 
-<<< @/snippets/postguard-tb-addon/src/background/background.ts{742-750 ts}
+```ts
+  if (!pending) return null;
+  return pending.data;
+}
 
+async function handleYiviPopupDone(
+  windowId: number | undefined,
+  jwt: string
+) {
+  if (windowId == null) return;
+```
+
+<small>[Source: background.ts#L742-L750](https://github.com/encryption4all/postguard-tb-addon/blob/d2ec84d26ab52044c3057dd3aeb7c8e1e3bc26ce/src/background/background.ts#L742-L750)</small>
 ## Wire format
 
 PostGuard ciphertext uses a binary format with three parts:

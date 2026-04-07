@@ -3,9 +3,8 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "snippets": "bash scripts/fetch-snippets.sh",
-    "docs:dev": "npm run snippets && vitepress dev docs",
-    "docs:build": "npm run snippets && vitepress build docs",
+    "docs:dev": "vitepress dev docs",
+    "docs:build": "vitepress build docs",
     "docs:preview": "vitepress preview docs"
   },
   "devDependencies": {

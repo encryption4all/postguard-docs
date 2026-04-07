@@ -6,17 +6,21 @@ VitePress documentation site. Run `npm run docs:dev` to preview locally.
 
 Code examples in the docs must come from real, working code. Do not invent example code.
 
-Snippets are pulled from source repos using VitePress code snippet imports. The `npm run snippets` script (runs automatically before `docs:dev` and `docs:build`) clones three repos into `docs/snippets/`:
+Snippets are pasted inline as fenced code blocks with a `<small>` source link underneath pointing to the exact file and lines on GitHub. The link must use a full commit hash so the content is pinned.
 
-- `postguard-examples` (SvelteKit web app example)
-- `postguard-tb-addon` (Thunderbird addon)
-- `postguard-outlook-addon` (Outlook addon)
+Source repositories:
 
-Use VitePress snippet syntax to include code: `<<< @/snippets/postguard-examples/pg-sveltekit/src/lib/postguard/encryption.ts`
+- `encryption4all/postguard-examples` (SvelteKit web app example)
+- `encryption4all/postguard-tb-addon` (Thunderbird addon)
+- `encryption4all/postguard-outlook-addon` (Outlook addon)
 
-Line ranges are supported: `<<< @/snippets/postguard-tb-addon/src/background/background.ts{65-206 ts}`
+When adding or updating a snippet:
 
-If a referenced file is renamed or deleted, the build will fail. This is intentional: it prevents stale snippets.
+1. Fetch the file from the raw GitHub URL using a specific commit hash: `https://raw.githubusercontent.com/encryption4all/REPO/COMMIT_HASH/path/to/file.ts`
+2. Copy the relevant lines into a fenced code block with the correct language tag.
+3. Add a source link directly below the code block: `<small>[Source: filename.ts#L20-L31](https://github.com/encryption4all/REPO/blob/COMMIT_HASH/path/to/file.ts#L20-L31)</small>`
+
+Keep snippets focused. Only include the lines that are relevant to the surrounding prose. Do not paste entire files when a 10-30 line extract will do.
 
 ## Writing Style Rules
 

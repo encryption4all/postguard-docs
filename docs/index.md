@@ -37,6 +37,47 @@ npm install @e4a/pg-js @e4a/pg-wasm
 
 Initialize PostGuard and encrypt files for delivery:
 
-<<< @/snippets/postguard-examples/pg-sveltekit/src/lib/postguard/encryption.ts{40-78 ts}
+```ts
+export interface EncryptAndSendOptions {
+	files: File[];
+	citizen: CitizenRecipient;
+	organisation: OrganisationRecipient;
+	apiKey: string;
+	message: string | null;
+	onProgress?: (percentage: number) => void;
+	abortController?: AbortController;
+}
 
+export async function encryptAndSend(options: EncryptAndSendOptions): Promise<void> {
+	const {
+		files,
+		citizen,
+		organisation,
+		apiKey,
+		message,
+		onProgress,
+		abortController = new AbortController()
+	} = options;
+
+	// Fetch MPK and signing keys in parallel
+	const [mpk, signingKeys] = await Promise.all([fetchMPK(), fetchSigningKeys(apiKey)]);
+
+	// Build encryption policy
+	const ts = Math.round(Date.now() / 1000);
+	const policy: Record<string, { ts: number; con: { t: string; v?: string }[] }> = {};
+
+	// Citizen: must prove exact email address
+	policy[citizen.email] = {
+		ts,
+		con: [{ t: 'pbdf.sidn-pbdf.email.email', v: citizen.email }]
+	};
+
+	// Organisation: must prove an email at the correct domain
+	policy[organisation.email] = {
+		ts,
+		con: [{ t: 'pbdf.sidn-pbdf.email.domain', v: extractDomain(organisation.email) }]
+	};
+```
+
+<small>[Source: encryption.ts#L40-L78](https://github.com/encryption4all/postguard-examples/blob/6d538923ade9b013222685bec1f4588f610ccf86/pg-sveltekit/src/lib/postguard/encryption.ts#L40-L78)</small>
 Read the [concepts guide](/guide/concepts) to understand how this works, or jump straight to [getting started](/guide/getting-started).
