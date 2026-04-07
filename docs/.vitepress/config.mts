@@ -16,6 +16,7 @@ export default defineConfig({
         text: 'Guide',
         items: [
           { text: 'What is PostGuard?', link: '/guide/what-is-postguard' },
+          { text: 'Usage Flows', link: '/guide/usage-flows' },
           { text: 'Core Concepts', link: '/guide/concepts' },
           { text: 'Architecture', link: '/guide/architecture' },
           { text: 'Getting Started', link: '/guide/getting-started' },
