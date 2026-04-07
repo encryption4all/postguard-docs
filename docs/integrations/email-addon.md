@@ -37,13 +37,13 @@ The background script owns the PostGuard SDK instance. The session callback brid
 
 Browser extensions often cannot use dynamic `import()` for WASM modules. The Thunderbird addon loads WASM at startup and passes it to the constructor:
 
-<<< @/snippets/postguard-tb-addon/src/background/background.ts{65-206 ts}
+<<< @/snippets/postguard-tb-addon/src/background/background.ts{78-106 ts}
 
 ### Caching PKG keys
 
 The Thunderbird addon caches the Master Public Key in `browser.storage.local` for offline resilience. If the PKG is unreachable, the cached key is used as a fallback:
 
-<<< @/snippets/postguard-tb-addon/src/lib/pkg-client.ts
+<<< @/snippets/postguard-tb-addon/src/lib/pkg-client.ts{13-33 ts}
 
 ## The Session Callback Pattern
 
@@ -67,7 +67,7 @@ The background script routes `yiviPopupInit` and `yiviPopupDone` messages from t
 
 The popup uses the SDK's `runYiviSession()` utility to handle the full Yivi flow, then sends the JWT back to the background:
 
-<<< @/snippets/postguard-tb-addon/src/pages/yivi-popup/yivi-popup.ts
+<<< @/snippets/postguard-tb-addon/src/pages/yivi-popup/yivi-popup.ts{21-96 ts}
 
 ## Email Encryption Flow
 

@@ -37,6 +37,6 @@ npm install @e4a/pg-js @e4a/pg-wasm
 
 Initialize PostGuard and encrypt files for delivery:
 
-<<< @/snippets/postguard-examples/pg-sveltekit/src/lib/postguard/encryption.ts
+<<< @/snippets/postguard-examples/pg-sveltekit/src/lib/postguard/encryption.ts{40-78 ts}
 
 Read the [concepts guide](/guide/concepts) to understand how this works, or jump straight to [getting started](/guide/getting-started).

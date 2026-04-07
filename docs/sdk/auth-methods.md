@@ -70,7 +70,7 @@ The `createYiviPopup` function opens a browser popup and resolves with the JWT w
 
 The popup uses the SDK's `runYiviSession()` utility to handle the full Yivi flow:
 
-<<< @/snippets/postguard-tb-addon/src/pages/yivi-popup/yivi-popup.ts
+<<< @/snippets/postguard-tb-addon/src/pages/yivi-popup/yivi-popup.ts{56-96 ts}
 
 ### Outlook dialog pattern
 

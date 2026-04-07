@@ -31,11 +31,11 @@ The public config provides the PKG and Cryptify URLs to the browser:
 
 Create a module that initializes PostGuard and wraps the `encryptAndDeliver` call:
 
-<<< @/snippets/postguard-examples/pg-sveltekit/src/lib/postguard/encryption.ts
+<<< @/snippets/postguard-examples/pg-sveltekit/src/lib/postguard/encryption.ts{1-87 ts}
 
 Then build a page that calls this function. This example uses API key authentication (PostGuard for Business):
 
-<<< @/snippets/postguard-examples/pg-sveltekit/src/routes/send/+page.svelte
+<<< @/snippets/postguard-examples/pg-sveltekit/src/routes/send/+page.svelte{1-65}
 
 The server load function passes the API key to the page:
 
@@ -45,7 +45,7 @@ The server load function passes the API key to the page:
 
 A page that decrypts files from a Cryptify UUID. The UUID and recipient can come from URL query parameters (as provided in Cryptify notification emails):
 
-<<< @/snippets/postguard-examples/pg-sveltekit/src/routes/download/+page.svelte
+<<< @/snippets/postguard-examples/pg-sveltekit/src/routes/download/+page.svelte{1-75}
 
 ## Yivi QR Styling
 

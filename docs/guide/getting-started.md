@@ -37,7 +37,7 @@ npm install @privacybydesign/yivi-core @privacybydesign/yivi-client @privacybyde
 
 Create a PostGuard instance and encrypt files for delivery. This module from the SvelteKit example initializes the client and wraps `encryptAndDeliver` with an API key:
 
-<<< @/snippets/postguard-examples/pg-sveltekit/src/lib/postguard/encryption.ts
+<<< @/snippets/postguard-examples/pg-sveltekit/src/lib/postguard/encryption.ts{40-87 ts}
 
 The configuration comes from environment variables:
 
@@ -77,7 +77,7 @@ You need Vite plugins for WASM support and Node.js polyfills for browser environ
 
 Browser extensions often cannot use dynamic `import()` for WASM modules. The Thunderbird addon loads WASM indirectly and passes it to the constructor:
 
-<<< @/snippets/postguard-tb-addon/src/background/background.ts{65-206 ts}
+<<< @/snippets/postguard-tb-addon/src/background/background.ts{78-106 ts}
 
 ## Next Steps
 

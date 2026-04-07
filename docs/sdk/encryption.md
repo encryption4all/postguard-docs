@@ -58,7 +58,7 @@ Requires `cryptifyUrl` to be set in the constructor.
 
 Same as `encryptAndUpload`, but also triggers Cryptify to send email notifications to all recipients with a link to decrypt. The SvelteKit example uses this with an API key:
 
-<<< @/snippets/postguard-examples/pg-sveltekit/src/lib/postguard/encryption.ts
+<<< @/snippets/postguard-examples/pg-sveltekit/src/lib/postguard/encryption.ts{50-87 ts}
 
 ### Delivery options
 
