@@ -4,11 +4,11 @@ PostGuard requires the sender to prove their identity before encrypting. The SDK
 
 ## Comparison
 
-| Method | Environment | Yivi packages needed | Interactive |
-|--------|-------------|---------------------|-------------|
-| `pg.sign.apiKey()` | Server-side, trusted clients | No | No |
-| `pg.sign.yivi()` | Browser apps | Yes | Yes (QR code) |
-| `pg.sign.session()` | Extensions, custom flows | No | Depends on callback |
+| Method | Environment | Interactive |
+|--------|-------------|-------------|
+| `pg.sign.apiKey()` | Server-side, trusted clients | No |
+| `pg.sign.yivi()` | Browser apps | Yes (QR code) |
+| `pg.sign.session()` | Extensions, custom flows | Depends on callback |
 
 ## API Key
 
@@ -17,25 +17,23 @@ Uses a pre-shared API key (prefixed with `PG-API-`) to authenticate with the PKG
 The SvelteKit example uses an API key for encryption:
 
 ```ts
-	apiKey: string
-): Promise<{ pubSignKey: unknown; privSignKey?: unknown }> {
-	const response = await fetch(`${PKG_URL}/v2/irma/sign/key`, {
-		method: 'POST',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${apiKey}`
-		},
-		body: JSON.stringify({
-			pubSignId: [{ t: 'pbdf.sidn-pbdf.email.email' }]
-		})
-	});
-	if (!response.ok) {
-		const text = await response.text();
-		throw new Error(`Failed to fetch signing keys: ${response.status} ${text}`);
-	}
+const sealed = pg.encrypt({
+  files,
+  recipients: [
+    pg.recipient.email(citizen.email),
+    pg.recipient.emailDomain(organisation.email)
+  ],
+  sign: pg.sign.apiKey(apiKey),
+  onProgress,
+  signal: abortController?.signal
+});
+
+const result = await sealed.upload({
+  notify: { message: message ?? undefined, language: 'EN' }
+});
 ```
 
-<small>[Source: encryption.ts#L17-L32](https://github.com/encryption4all/postguard-examples/blob/6d538923ade9b013222685bec1f4588f610ccf86/pg-sveltekit/src/lib/postguard/encryption.ts#L17-L32)</small>
+<small>[Source: encryption.ts#L26-L43](https://github.com/encryption4all/postguard-examples/blob/d6c7f01d3cb63d84e94b1e59079b0d80d748d23b/pg-sveltekit/src/lib/postguard/encryption.ts#L26-L43)</small>
 
 The SDK sends the API key as a `Bearer` token in the `Authorization` header when requesting signing keys from the PKG at `POST /v2/irma/sign/key`.
 
@@ -47,28 +45,17 @@ API keys are part of PostGuard for Business. Contact your PKG administrator to o
 
 Runs an interactive Yivi session directly in the browser. The SDK renders a QR code (or app link on mobile) in the specified DOM element. The user scans it with the Yivi app to prove their email address.
 
-The SvelteKit download page uses the `element` parameter for Yivi-based decryption:
+The SvelteKit download page uses `element` for Yivi-based decryption:
 
 ```ts
-		recipientParam = params.get('recipient') ?? '';
-
-		if (uuid) {
-			startDownload();
-		} else {
-			dlState = 'loading';
+const opened = pg.open({ uuid });
+const decrypted = await opened.decrypt({
+  element: '#yivi-web',
+  recipient: recipientParam || undefined
+});
 ```
 
-<small>[Source: +page.svelte#L44-L49](https://github.com/encryption4all/postguard-examples/blob/6d538923ade9b013222685bec1f4588f610ccf86/pg-sveltekit/src/routes/download/+page.svelte#L44-L49)</small>
-
-### Requirements
-
-The Yivi web packages must be installed:
-
-```sh
-npm install @privacybydesign/yivi-core @privacybydesign/yivi-client @privacybydesign/yivi-web
-```
-
-If they are not installed, the SDK throws a `YiviNotInstalledError` when you try to use this method.
+<small>[Source: +page.svelte#L47-L51](https://github.com/encryption4all/postguard-examples/blob/d6c7f01d3cb63d84e94b1e59079b0d80d748d23b/pg-sveltekit/src/routes/download/+page.svelte#L47-L51)</small>
 
 ### Parameters
 
@@ -85,145 +72,42 @@ The most flexible method. You provide a callback function that receives a sessio
 The Thunderbird addon uses this for both encryption and decryption. For encryption, the session callback opens a Yivi popup:
 
 ```ts
-          }
-        } catch (e) {
-          console.warn("[PostGuard] Could not fetch related message headers:", e);
-        }
-      }
-
-      // Build inner MIME
-      const mimeData = buildInnerMime({
-        from: details.from,
+const encrypted = await pg!.encrypt({
+  sign: pg!.sign.session(
+    async ({ con, sort }) => createYiviPopup(con as AttributeCon, sort as KeySort),
+    { senderEmail: from }
+  ),
+  recipients: pgRecipients,
+  data: mimeData,
+});
 ```
 
-<small>[Source: background.ts#L388-L396](https://github.com/encryption4all/postguard-tb-addon/blob/d2ec84d26ab52044c3057dd3aeb7c8e1e3bc26ce/src/background/background.ts#L388-L396)</small>
+<small>[Source: background.ts#L389-L396](https://github.com/encryption4all/postguard-tb-addon/blob/c1eadec67b68082bce23ba3c1d387c78877dee8a/src/background/background.ts#L389-L396)</small>
 
-For decryption:
+For decryption, the same pattern with a session callback:
 
 ```ts
-    }
-  };
-  browser.windows.onRemoved.addListener(closeListener);
-
-  return keepAlive(
-    "yivi-session",
-    jwtPromise.finally(() => {
-      browser.windows.onRemoved.removeListener(closeListener);
-    })
-  ) as Promise<string>;
-}
-
+const result = await pg.decrypt({
+  data: ciphertext,
+  recipient: myAddresses[0],
+  session: async ({ con, sort, hints, senderId }) => {
+    return createYiviPopup(con as AttributeCon, sort as KeySort, hints, senderId);
+  },
+}) as DecryptDataResult;
 ```
 
-<small>[Source: background.ts#L727-L738](https://github.com/encryption4all/postguard-tb-addon/blob/d2ec84d26ab52044c3057dd3aeb7c8e1e3bc26ce/src/background/background.ts#L727-L738)</small>
+<small>[Source: background.ts#L727-L738](https://github.com/encryption4all/postguard-tb-addon/blob/c1eadec67b68082bce23ba3c1d387c78877dee8a/src/background/background.ts#L727-L738)</small>
 
-The `createYiviPopup` function opens a browser popup and resolves with the JWT when the Yivi session completes:
+### The callback receives
 
-```ts
-    state.configWindowId = popupId;
-  }
+| Property | Type | Description |
+|----------|------|-------------|
+| `con` | `Array<{ t, v? }>` | Attribute constraints the user must prove |
+| `sort` | `'Signing' \| 'Decryption'` | Whether this is for signing or decryption |
+| `hints` | `Array<{ t, v? }>` | Optional hints (e.g. expected recipient email) |
+| `senderId` | `string` | Optional sender identifier |
 
-  // Store pending editor data
-  const policyPromise = new Promise<Policy>((resolve, reject) => {
-    pendingPolicyEditors.set(popupId, {
-      composeTabId: tabId,
-      initialPolicy,
-      sign,
-      resolve,
-      reject,
-    });
-  });
-
-  // Listen for window close
-  const closeListener = (closedWindowId: number) => {
-    if (closedWindowId === popupId) {
-      const pending = pendingPolicyEditors.get(popupId);
-      if (pending) {
-        pending.reject(new Error("window closed"));
-        pendingPolicyEditors.delete(popupId);
-      }
-      browser.windows.onRemoved.removeListener(closeListener);
-    }
-  };
-  browser.windows.onRemoved.addListener(closeListener);
-
-  try {
-    const newPolicy = await policyPromise;
-    if (sign) {
-      state.signId = newPolicy;
-    } else {
-      state.policy = newPolicy;
-    }
-  } catch {
-    // user cancelled
-  } finally {
-    if (sign) {
-      state.signWindowId = undefined;
-    } else {
-      state.configWindowId = undefined;
-    }
-    browser.windows.onRemoved.removeListener(closeListener);
-  }
-}
-
-async function handlePolicyEditorInit(windowId: number | undefined) {
-  if (windowId == null) return null;
-  const pending = pendingPolicyEditors.get(windowId);
-  if (!pending) return null;
-  return {
-```
-
-<small>[Source: background.ts#L608-L658](https://github.com/encryption4all/postguard-tb-addon/blob/d2ec84d26ab52044c3057dd3aeb7c8e1e3bc26ce/src/background/background.ts#L608-L658)</small>
-
-### The popup page
-
-The popup uses the SDK's `runYiviSession()` utility to handle the full Yivi flow:
-
-```ts
-  try {
-    // Start Yivi session via PKG
-    const resp = await fetch(`${data.hostname}/v2/request/start`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", ...data.header },
-      body: JSON.stringify({ con: data.con }),
-    });
-    if (!resp.ok) throw new Error(`Session start failed: ${resp.status}`);
-
-    const { sessionPtr, token } = await resp.json();
-    console.log("[PostGuard] Yivi session started, token:", token);
-    loadingEl.style.display = "none";
-
-    // Show QR code from the IRMA session pointer
-    showQrCode(sessionPtr);
-
-    // Poll IRMA server for session status, then retrieve JWT from PKG
-    await pollIrmaStatus(sessionPtr.u);
-    console.log("[PostGuard] IRMA session DONE, fetching JWT from PKG...");
-
-    // Fetch JWT from PKG (returned as plain text, not JSON)
-    const jwtResp = await fetch(
-      `${data.hostname}/v2/request/jwt/${token}`,
-      { headers: data.header }
-    );
-    if (!jwtResp.ok) throw new Error(`JWT fetch failed: ${jwtResp.status}`);
-    const jwt = await jwtResp.text();
-
-    console.log("[PostGuard] JWT received, sending to background");
-    await browser.runtime.sendMessage({ type: "yiviPopupDone", jwt });
-
-    // Auto-close after a short delay
-    setTimeout(async () => {
-      const win = await browser.windows.getCurrent();
-      browser.windows.remove(win.id);
-    }, 750);
-  } catch (e) {
-    console.error("[PostGuard] Yivi session error:", e);
-    showError(e instanceof Error ? e.message : "Yivi session failed.");
-  }
-}
-```
-
-<small>[Source: yivi-popup.ts#L56-L96](https://github.com/encryption4all/postguard-tb-addon/blob/d2ec84d26ab52044c3057dd3aeb7c8e1e3bc26ce/src/pages/yivi-popup/yivi-popup.ts#L56-L96)</small>
+The callback must return a JWT string from a completed Yivi session.
 
 ### Outlook dialog pattern
 
@@ -279,4 +163,4 @@ See the [Email Addon Integration](/integrations/email-addon) guide for the full 
 
 ## Decryption Authentication
 
-Decryption also requires identity verification. The same `element` and `session` patterns apply. You must provide either `element` or `session` for decryption. If neither is provided, the SDK throws a `DecryptionError`.
+Decryption also requires identity verification. The same `element` and `session` patterns apply. You must provide either `element` or `session` when calling `opened.decrypt()`. If neither is provided, the SDK throws a `DecryptionError`.

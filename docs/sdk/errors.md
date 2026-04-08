@@ -48,15 +48,9 @@ Thrown when:
 
 ## `YiviNotInstalledError`
 
-Thrown when `pg.sign.yivi()` or `decrypt({ element })` is used but the required Yivi packages are not installed. The SDK attempts to dynamically import `@privacybydesign/yivi-core`, `@privacybydesign/yivi-client`, and `@privacybydesign/yivi-web`. If any import fails, this error is thrown.
+Thrown when `pg.sign.yivi()` or `opened.decrypt({ element })` is used but the required Yivi packages are not installed. The SDK attempts to dynamically import `@privacybydesign/yivi-core`, `@privacybydesign/yivi-client`, and `@privacybydesign/yivi-web`. If any import fails, this error is thrown.
 
-Fix: install the Yivi packages:
-
-```sh
-npm install @privacybydesign/yivi-core @privacybydesign/yivi-client @privacybydesign/yivi-web
-```
-
-Or use `pg.sign.session()` or `pg.sign.apiKey()` instead.
+The Yivi packages are transitive dependencies of the SDK. If you see this error, check that `npm install` completed without errors and that the packages are in your `node_modules`.
 
 ## `DecryptionError`
 
@@ -71,38 +65,33 @@ Thrown when:
 
 A subclass of `DecryptionError`. Thrown when the Yivi attributes proven by the user do not match the encryption policy embedded in the ciphertext. For example, the message was encrypted for `alice@example.com` but the user proved `bob@example.com`.
 
-## Real-world error handling
+## Usage example
 
-The SvelteKit download page handles all decryption error types:
-
-```ts
-			if (!uuid) return;
-		}
-		dlState = 'loading';
-
-		try {
-			unsealer = await createUnsealer(uuid);
-			policies = unsealer.inspect_header();
-
-			try {
-```
-
-<small>[Source: +page.svelte#L56-L64](https://github.com/encryption4all/postguard-examples/blob/6d538923ade9b013222685bec1f4588f610ccf86/pg-sveltekit/src/routes/download/+page.svelte#L56-L64)</small>
-
-The Thunderbird addon handles errors in the decryption flow:
+The SvelteKit download page handles decryption errors:
 
 ```ts
-        bytes[i] = binaryString.charCodeAt(i);
-      }
-      createReadable = async () =>
-        new ReadableStream<Uint8Array>({
-          start(controller) {
-            controller.enqueue(bytes);
-            controller.close();
-          },
+try {
+  const opened = pg.open({ uuid });
+  const decrypted = await opened.decrypt({
+    element: '#yivi-web',
+    recipient: recipientParam || undefined
+  });
+
+  result = decrypted as DecryptFileResult;
+  senderEmail = result.sender?.email ?? '';
+  dlState = 'done';
+  result.download();
+} catch (e) {
+  if (e instanceof IdentityMismatchError) {
+    dlState = 'identity-mismatch';
+  } else {
+    errorMessage = e instanceof Error ? e.message : String(e);
+    dlState = 'error';
+  }
+}
 ```
 
-<small>[Source: background.ts#L798-L805](https://github.com/encryption4all/postguard-tb-addon/blob/d2ec84d26ab52044c3057dd3aeb7c8e1e3bc26ce/src/background/background.ts#L798-L805)</small>
+<small>[Source: +page.svelte#L44-L63](https://github.com/encryption4all/postguard-examples/blob/d6c7f01d3cb63d84e94b1e59079b0d80d748d23b/pg-sveltekit/src/routes/download/+page.svelte#L44-L63)</small>
 
 ::: tip
 Always check for the most specific error first (`IdentityMismatchError`) and work up to the most general (`PostGuardError`), since they form an inheritance chain.

@@ -1,89 +1,80 @@
 # Encryption
 
-The SDK provides three encryption methods, each suited to a different use case.
+`pg.encrypt()` returns a `Sealed` builder. The builder captures encryption parameters but does no work until you call a terminal method.
 
-| Method | Upload | Email delivery | Returns |
-|--------|--------|----------------|---------|
-| `encrypt()` | No | No | `Uint8Array` |
-| `encryptAndUpload()` | Yes | No | `{ uuid }` |
-| `encryptAndDeliver()` | Yes | Yes | `{ uuid }` |
+## Terminal methods
+
+| Method | What it does | Returns |
+|--------|--------------|---------|
+| `sealed.toBytes()` | Encrypt and buffer in memory | `Promise<Uint8Array>` |
+| `sealed.upload()` | Encrypt and stream to Cryptify | `Promise<{ uuid }>` |
+| `sealed.upload({ notify })` | Same, plus Cryptify sends email | `Promise<{ uuid }>` |
 
 ## Recipients
 
-Before encrypting, build one or more recipients. PostGuard can encrypt with any wallet attribute. Email is the most common, but you can also target recipients by name, BSN, domain, or any other verified attribute.
+Before encrypting, build one or more recipients. PostGuard can encrypt with any wallet attribute. Email is the most common, but you can also target recipients by domain or custom attributes.
 
-The SvelteKit example uses `pg.recipient.email()` and `pg.recipient.emailDomain()`:
-
-```ts
-		method: 'POST',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${apiKey}`
-		},
-		body: JSON.stringify({
-			pubSignId: [{ t: 'pbdf.sidn-pbdf.email.email' }]
-		})
-	});
-	if (!response.ok) {
-		const text = await response.text();
-		throw new Error(`Failed to fetch signing keys: ${response.status} ${text}`);
-```
-
-<small>[Source: encryption.ts#L20-L31](https://github.com/encryption4all/postguard-examples/blob/6d538923ade9b013222685bec1f4588f610ccf86/pg-sveltekit/src/lib/postguard/encryption.ts#L20-L31)</small>
-
-The Thunderbird addon builds recipients with custom policies when configured:
+The SvelteKit example encrypts for a citizen (exact email) and an organisation (email domain):
 
 ```ts
-      const timestamp = Math.round(date.getTime() / 1000);
-
-      // Build attachments list
-      const composeAttachments = await browser.compose.listAttachments(tab.id);
-      const attachmentData = await Promise.all(
-        composeAttachments.map(async (att) => {
-          const file = await browser.compose.getAttachmentFile(att.id) as unknown as File;
-          return {
-            name: file.name,
-            type: file.type,
-            data: await file.arrayBuffer(),
-          };
-        })
-      );
-
+const sealed = pg.encrypt({
+  files,
+  recipients: [
+    pg.recipient.email(citizen.email),
+    pg.recipient.emailDomain(organisation.email)
+  ],
+  sign: pg.sign.apiKey(apiKey),
+  onProgress,
+  signal: abortController?.signal
+});
 ```
 
-<small>[Source: background.ts#L362-L376](https://github.com/encryption4all/postguard-tb-addon/blob/d2ec84d26ab52044c3057dd3aeb7c8e1e3bc26ce/src/background/background.ts#L362-L376)</small>
+<small>[Source: encryption.ts#L26-L35](https://github.com/encryption4all/postguard-examples/blob/d6c7f01d3cb63d84e94b1e59079b0d80d748d23b/pg-sveltekit/src/lib/postguard/encryption.ts#L26-L35)</small>
 
 Under the hood, `pg.recipient.email()` creates a policy with the attribute type `pbdf.sidn-pbdf.email.email`, while `pg.recipient.emailDomain()` extracts the domain from the email and uses `pbdf.sidn-pbdf.email.domain`.
 
-## `encrypt()`
-
-Encrypts raw data and returns the ciphertext as a `Uint8Array`. No files are uploaded. The Thunderbird addon uses this to encrypt MIME email content:
+The Thunderbird addon builds recipients with custom policies when the user has configured extra attribute requirements:
 
 ```ts
-          }
-        } catch (e) {
-          console.warn("[PostGuard] Could not fetch related message headers:", e);
-        }
-      }
-
-      // Build inner MIME
-      const mimeData = buildInnerMime({
-        from: details.from,
+const pgRecipients = recipients.map((r: string) => {
+  const id = toEmail(r);
+  if (customPolicies && customPolicies[id]) {
+    return pg!.recipient.withPolicy(
+      id,
+      customPolicies[id].map(({ t, v }) =>
+        t === EMAIL_ATTRIBUTE_TYPE ? { t, v: v.toLowerCase() } : { t, v }
+      )
+    );
+  }
+  return pg!.recipient.email(id);
+});
 ```
 
-<small>[Source: background.ts#L388-L396](https://github.com/encryption4all/postguard-tb-addon/blob/d2ec84d26ab52044c3057dd3aeb7c8e1e3bc26ce/src/background/background.ts#L388-L396)</small>
+<small>[Source: background.ts#L365-L376](https://github.com/encryption4all/postguard-tb-addon/blob/c1eadec67b68082bce23ba3c1d387c78877dee8a/src/background/background.ts#L365-L376)</small>
 
-### Parameters
+## Encrypt and upload
 
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `sign` | `SignMethod` | Yes | Authentication method |
-| `recipients` | `Recipient[]` | Yes | One or more recipients |
-| `data` | `Uint8Array \| ReadableStream<Uint8Array>` | Yes | Data to encrypt |
+Encrypts files, bundles them into a ZIP, and streams the encrypted data to Cryptify. Returns a UUID that recipients use to download and decrypt.
 
-## `encryptAndUpload()`
+```ts
+const sealed = pg.encrypt({
+  files,
+  recipients: [pg.recipient.email(citizen.email), pg.recipient.emailDomain(organisation.email)],
+  sign: pg.sign.apiKey(apiKey),
+  onProgress,
+  signal: abortController?.signal
+});
 
-Encrypts one or more files and uploads them to Cryptify. The files are bundled into a ZIP archive, encrypted, and streamed to Cryptify in chunks (1 MB by default). Returns a UUID that recipients can use to download and decrypt.
+// Upload only (returns UUID for custom delivery)
+const { uuid } = await sealed.upload();
+
+// Upload and have Cryptify send email notifications
+const { uuid } = await sealed.upload({
+  notify: { message: 'Here are your files', language: 'EN' }
+});
+```
+
+<small>[Source: encryption.ts#L22-L46](https://github.com/encryption4all/postguard-examples/blob/d6c7f01d3cb63d84e94b1e59079b0d80d748d23b/pg-sveltekit/src/lib/postguard/encryption.ts#L22-L46)</small>
 
 ::: warning
 Requires `cryptifyUrl` to be set in the constructor.
@@ -93,66 +84,41 @@ Requires `cryptifyUrl` to be set in the constructor.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
+| `files` | `File[] \| FileList` | Yes* | Files to encrypt (zipped automatically) |
+| `data` | `Uint8Array \| ReadableStream` | Yes* | Raw data to encrypt (no zipping) |
 | `sign` | `SignMethod` | Yes | Authentication method |
 | `recipients` | `Recipient[]` | Yes | One or more recipients |
-| `files` | `File[] \| FileList` | Yes | Files to encrypt |
 | `onProgress` | `(pct: number) => void` | No | Upload progress callback (0-100) |
 | `signal` | `AbortSignal` | No | Cancel the operation |
 
-## `encryptAndDeliver()`
+*Provide either `files` or `data`, not both.
 
-Same as `encryptAndUpload`, but also triggers Cryptify to send email notifications to all recipients with a link to decrypt. The SvelteKit example uses this with an API key:
-
-```ts
-export async function encryptAndSend(options: EncryptAndSendOptions): Promise<void> {
-	const {
-		files,
-		citizen,
-		organisation,
-		apiKey,
-		message,
-		onProgress,
-		abortController = new AbortController()
-	} = options;
-
-	// Fetch MPK and signing keys in parallel
-	const [mpk, signingKeys] = await Promise.all([fetchMPK(), fetchSigningKeys(apiKey)]);
-
-	// Build encryption policy
-	const ts = Math.round(Date.now() / 1000);
-	const policy: Record<string, { ts: number; con: { t: string; v?: string }[] }> = {};
-
-	// Citizen: must prove exact email address
-	policy[citizen.email] = {
-		ts,
-		con: [{ t: 'pbdf.sidn-pbdf.email.email', v: citizen.email }]
-	};
-
-	// Organisation: must prove an email at the correct domain
-	policy[organisation.email] = {
-		ts,
-		con: [{ t: 'pbdf.sidn-pbdf.email.domain', v: extractDomain(organisation.email) }]
-	};
-
-	const sealOptions: ISealOptions = {
-		policy,
-		pubSignKey: signingKeys.pubSignKey as ISealOptions['pubSignKey']
-	};
-	if (signingKeys.privSignKey) {
-		sealOptions.privSignKey = signingKeys.privSignKey as ISealOptions['pubSignKey'];
-	}
-
-```
-
-<small>[Source: encryption.ts#L50-L87](https://github.com/encryption4all/postguard-examples/blob/6d538923ade9b013222685bec1f4588f610ccf86/pg-sveltekit/src/lib/postguard/encryption.ts#L50-L87)</small>
-
-### Delivery options
+### Notify options
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `message` | `string` | `undefined` | Custom message in the notification email |
 | `language` | `'EN' \| 'NL'` | `'EN'` | Language of the notification email |
 | `confirmToSender` | `boolean` | `false` | Send a delivery confirmation to the sender |
+
+## Encrypt raw data
+
+For email addons, use `data` instead of `files`. The Thunderbird addon encrypts the full MIME message (body + attachments) as raw bytes:
+
+```ts
+const encrypted = await pg!.encrypt({
+  sign: pg!.sign.session(
+    async ({ con, sort }) => createYiviPopup(con as AttributeCon, sort as KeySort),
+    { senderEmail: from }
+  ),
+  recipients: pgRecipients,
+  data: mimeData,
+});
+```
+
+<small>[Source: background.ts#L389-L396](https://github.com/encryption4all/postguard-tb-addon/blob/c1eadec67b68082bce23ba3c1d387c78877dee8a/src/background/background.ts#L389-L396)</small>
+
+Call `.toBytes()` to get the encrypted data, or pass the `Sealed` object directly to `pg.email.createEnvelope()` for email integration.
 
 ## Error handling
 

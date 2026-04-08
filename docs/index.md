@@ -32,53 +32,28 @@ features:
 Install the SDK:
 
 ```bash
-npm install @e4a/pg-js @e4a/pg-wasm
+npm install @e4a/pg-js
 ```
 
-Initialize PostGuard and encrypt files for delivery:
+Encrypt files and send them to a recipient:
 
 ```ts
-export interface EncryptAndSendOptions {
-	files: File[];
-	citizen: CitizenRecipient;
-	organisation: OrganisationRecipient;
-	apiKey: string;
-	message: string | null;
-	onProgress?: (percentage: number) => void;
-	abortController?: AbortController;
-}
+import { PostGuard } from '@e4a/pg-js';
 
-export async function encryptAndSend(options: EncryptAndSendOptions): Promise<void> {
-	const {
-		files,
-		citizen,
-		organisation,
-		apiKey,
-		message,
-		onProgress,
-		abortController = new AbortController()
-	} = options;
+const pg = new PostGuard({
+  pkgUrl: 'https://pkg.staging.yivi.app',
+  cryptifyUrl: 'https://fileshare.staging.yivi.app'
+});
 
-	// Fetch MPK and signing keys in parallel
-	const [mpk, signingKeys] = await Promise.all([fetchMPK(), fetchSigningKeys(apiKey)]);
+const sealed = pg.encrypt({
+  files: [file1, file2],
+  recipients: [pg.recipient.email('alice@example.com')],
+  sign: pg.sign.apiKey('PG-API-your-key')
+});
 
-	// Build encryption policy
-	const ts = Math.round(Date.now() / 1000);
-	const policy: Record<string, { ts: number; con: { t: string; v?: string }[] }> = {};
-
-	// Citizen: must prove exact email address
-	policy[citizen.email] = {
-		ts,
-		con: [{ t: 'pbdf.sidn-pbdf.email.email', v: citizen.email }]
-	};
-
-	// Organisation: must prove an email at the correct domain
-	policy[organisation.email] = {
-		ts,
-		con: [{ t: 'pbdf.sidn-pbdf.email.domain', v: extractDomain(organisation.email) }]
-	};
+await sealed.upload({ notify: { message: 'Here are your files' } });
 ```
 
-<small>[Source: encryption.ts#L40-L78](https://github.com/encryption4all/postguard-examples/blob/6d538923ade9b013222685bec1f4588f610ccf86/pg-sveltekit/src/lib/postguard/encryption.ts#L40-L78)</small>
+<small>[Source: encryption.ts#L22-L46](https://github.com/encryption4all/postguard-examples/blob/d6c7f01d3cb63d84e94b1e59079b0d80d748d23b/pg-sveltekit/src/lib/postguard/encryption.ts#L22-L46)</small>
 
 Read the [concepts guide](/guide/concepts) to understand how this works, or jump straight to [getting started](/guide/getting-started).
