@@ -50,7 +50,7 @@ const pgRecipients = recipients.map((r: string) => {
 });
 ```
 
-<small>[Source: background.ts#L365-L376](https://github.com/encryption4all/postguard-tb-addon/blob/c1eadec67b68082bce23ba3c1d387c78877dee8a/src/background/background.ts#L365-L376)</small>
+<small>[Source: background.ts#L348-L359](https://github.com/encryption4all/postguard-tb-addon/blob/feat/implement-sdk/src/background/background.ts#L348-L359)</small>
 
 ## Encrypt and upload
 
@@ -106,7 +106,7 @@ Requires `cryptifyUrl` to be set in the constructor.
 For email addons, use `data` instead of `files`. The Thunderbird addon encrypts the full MIME message (body + attachments) as raw bytes:
 
 ```ts
-const encrypted = await pg!.encrypt({
+const sealed = pg!.encrypt({
   sign: pg!.sign.session(
     async ({ con, sort }) => createYiviPopup(con as AttributeCon, sort as KeySort),
     { senderEmail: from }
@@ -116,7 +116,7 @@ const encrypted = await pg!.encrypt({
 });
 ```
 
-<small>[Source: background.ts#L389-L396](https://github.com/encryption4all/postguard-tb-addon/blob/c1eadec67b68082bce23ba3c1d387c78877dee8a/src/background/background.ts#L389-L396)</small>
+<small>[Source: background.ts#L372-L379](https://github.com/encryption4all/postguard-tb-addon/blob/feat/implement-sdk/src/background/background.ts#L372-L379)</small>
 
 Call `.toBytes()` to get the encrypted data, or pass the `Sealed` object directly to `pg.email.createEnvelope()` for email integration.
 

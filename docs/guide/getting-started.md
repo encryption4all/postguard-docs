@@ -107,7 +107,7 @@ const envelope = await pg!.email.createEnvelope({
 });
 ```
 
-<small>[Source: background.ts#L349-L407](https://github.com/encryption4all/postguard-tb-addon/blob/c1eadec67b68082bce23ba3c1d387c78877dee8a/src/background/background.ts#L349-L407)</small>
+<small>[Source: background.ts#L331-L390](https://github.com/encryption4all/postguard-tb-addon/blob/feat/implement-sdk/src/background/background.ts#L331-L390)</small>
 
 ## 3. Decrypt
 
@@ -187,7 +187,7 @@ pg = new PostGuard({
 });
 ```
 
-<small>[Source: background.ts#L69-L76](https://github.com/encryption4all/postguard-tb-addon/blob/c1eadec67b68082bce23ba3c1d387c78877dee8a/src/background/background.ts#L69-L76)</small>
+<small>[Source: background.ts#L66-L73](https://github.com/encryption4all/postguard-tb-addon/blob/feat/implement-sdk/src/background/background.ts#L66-L73)</small>
 
 ## Next Steps
 

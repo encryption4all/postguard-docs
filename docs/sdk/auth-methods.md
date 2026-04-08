@@ -72,7 +72,7 @@ The most flexible method. You provide a callback function that receives a sessio
 The Thunderbird addon uses this for both encryption and decryption. For encryption, the session callback opens a Yivi popup:
 
 ```ts
-const encrypted = await pg!.encrypt({
+const sealed = pg!.encrypt({
   sign: pg!.sign.session(
     async ({ con, sort }) => createYiviPopup(con as AttributeCon, sort as KeySort),
     { senderEmail: from }
@@ -82,21 +82,26 @@ const encrypted = await pg!.encrypt({
 });
 ```
 
-<small>[Source: background.ts#L389-L396](https://github.com/encryption4all/postguard-tb-addon/blob/c1eadec67b68082bce23ba3c1d387c78877dee8a/src/background/background.ts#L389-L396)</small>
+<small>[Source: background.ts#L372-L379](https://github.com/encryption4all/postguard-tb-addon/blob/feat/implement-sdk/src/background/background.ts#L372-L379)</small>
 
 For decryption, the same pattern with a session callback:
 
 ```ts
-const result = await pg.decrypt({
-  data: ciphertext,
+const opened = pg.open({ data: ciphertext });
+const result = await opened.decrypt({
   recipient: myAddresses[0],
   session: async ({ con, sort, hints, senderId }) => {
-    return createYiviPopup(con as AttributeCon, sort as KeySort, hints, senderId);
+    return createYiviPopup(
+      con as AttributeCon,
+      sort as KeySort,
+      hints as AttributeCon | undefined,
+      senderId
+    );
   },
 }) as DecryptDataResult;
 ```
 
-<small>[Source: background.ts#L727-L738](https://github.com/encryption4all/postguard-tb-addon/blob/c1eadec67b68082bce23ba3c1d387c78877dee8a/src/background/background.ts#L727-L738)</small>
+<small>[Source: background.ts#L710-L721](https://github.com/encryption4all/postguard-tb-addon/blob/feat/implement-sdk/src/background/background.ts#L710-L721)</small>
 
 ### The callback receives
 

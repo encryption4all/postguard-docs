@@ -42,7 +42,7 @@ const mimeData = pg!.email.buildMime({
 });
 ```
 
-<small>[Source: background.ts#L349-L360](https://github.com/encryption4all/postguard-tb-addon/blob/c1eadec67b68082bce23ba3c1d387c78877dee8a/src/background/background.ts#L349-L360)</small>
+<small>[Source: background.ts#L331-L342](https://github.com/encryption4all/postguard-tb-addon/blob/feat/implement-sdk/src/background/background.ts#L331-L342)</small>
 
 ### Parameters
 
@@ -84,7 +84,7 @@ const envelope = await pg!.email.createEnvelope({
 });
 ```
 
-<small>[Source: background.ts#L389-L407](https://github.com/encryption4all/postguard-tb-addon/blob/c1eadec67b68082bce23ba3c1d387c78877dee8a/src/background/background.ts#L389-L407)</small>
+<small>[Source: background.ts#L372-L390](https://github.com/encryption4all/postguard-tb-addon/blob/feat/implement-sdk/src/background/background.ts#L372-L390)</small>
 
 ### Parameters
 

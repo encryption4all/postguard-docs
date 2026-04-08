@@ -11,7 +11,7 @@ An email addon typically has three components:
 ```
 +---------------------------+
 |  Background script        |  PostGuard SDK lives here
-|  - Intercepts send/read   |  - pg.encrypt() / pg.decrypt()
+|  - Intercepts send/read   |  - pg.encrypt() / pg.open().decrypt()
 |  - Manages state          |  - pg.email.* helpers
 +---------------------------+
            |
@@ -38,68 +38,31 @@ The background script owns the PostGuard SDK instance. The session callback brid
 Browser extensions often cannot use dynamic `import()` for WASM modules. The Thunderbird addon loads WASM at startup and passes it to the constructor:
 
 ```ts
-// --- Load pg-wasm and fetch PKG keys on startup ---
-console.log("[PostGuard] Loading pg-wasm and fetching PKG keys...");
-
 // Use indirect dynamic import to prevent esbuild from resolving it
 const pgWasmPath = "./pg-wasm/load.js";
 const modPromise = import(/* @vite-ignore */ pgWasmPath).then((mod: any) => {
-  setSealStream(mod.sealStream as Parameters<typeof setSealStream>[0]);
-  setStreamUnsealer(mod.StreamUnsealer);
   console.log("[PostGuard] pg-wasm loaded");
-  return mod;
+  return mod as WasmModule;
 }).catch((e: Error) => {
   console.error("[PostGuard] Failed to load pg-wasm:", e);
   return null;
 });
 
-const pkPromise = fetchPublicKey();
-const vkPromise = fetchVerificationKey();
+// Later, after awaiting the module:
+pgWasm = await modPromise;
 
-// --- Register message display script ---
-// A restarting background will try to re-register — catch the error.
-browser.scripting.messageDisplay
-  .registerScripts([
-    {
-      id: "postguard-message-display",
-      css: ["/content/message-display.css"],
-      js: ["/content/message-display.js"],
-    },
-  ])
-  .catch(console.info);
-```
-
-<small>[Source: background.ts#L78-L106](https://github.com/encryption4all/postguard-tb-addon/blob/d2ec84d26ab52044c3057dd3aeb7c8e1e3bc26ce/src/background/background.ts#L78-L106)</small>
-
-### Caching PKG keys
-
-The Thunderbird addon caches the Master Public Key in `browser.storage.local` for offline resilience. If the PKG is unreachable, the cached key is used as a fallback:
-
-```ts
-export async function fetchPublicKey(): Promise<string> {
-  const stored = await browser.storage.local.get(PK_STORAGE_KEY);
-  const storedKey = stored[PK_STORAGE_KEY] as string | undefined;
-
-  try {
-    const resp = await fetch(`${PKG_URL}/v2/parameters`, {
-      headers: clientHeader,
-    });
-    const { publicKey } = await resp.json();
-    if (storedKey !== publicKey) {
-      await browser.storage.local.set({ [PK_STORAGE_KEY]: publicKey });
-    }
-    return publicKey;
-  } catch (e) {
-    console.warn(
-      `[PostGuard] Failed to fetch public key from PKG, falling back to cache: ${e}`
-    );
-    if (storedKey) return storedKey;
-    throw new Error("No public key available");
-  }
+if (pgWasm) {
+  pg = new PostGuard({
+    pkgUrl: PKG_URL!,
+    headers: PG_CLIENT_HEADER,
+    wasm: pgWasm,
+  });
 }
 ```
 
-<small>[Source: pkg-client.ts#L13-L33](https://github.com/encryption4all/postguard-tb-addon/blob/d2ec84d26ab52044c3057dd3aeb7c8e1e3bc26ce/src/lib/pkg-client.ts#L13-L33)</small>
+<small>[Source: background.ts#L66-L73, L170-L180](https://github.com/encryption4all/postguard-tb-addon/blob/feat/implement-sdk/src/background/background.ts#L66-L73)</small>
+
+The SDK handles all PKG communication (master public key fetching, key generation, etc.) internally — the addon only needs to provide the `pkgUrl`.
 
 ## The Session Callback Pattern
 
@@ -110,410 +73,6 @@ Since the background script cannot render DOM elements, `pg.sign.session()` open
 The background script tracks pending popups in a Map and resolves the Promise when the popup sends back a JWT:
 
 ```ts
-  number,
-  {
-    composeTabId: number;
-    initialPolicy: Policy;
-    sign: boolean;
-    resolve: (policy: Policy) => void;
-    reject: (err: Error) => void;
-  }
-```
-
-<small>[Source: background.ts#L56-L63](https://github.com/encryption4all/postguard-tb-addon/blob/d2ec84d26ab52044c3057dd3aeb7c8e1e3bc26ce/src/background/background.ts#L56-L63)</small>
-
-```ts
-    state.configWindowId = popupId;
-  }
-
-  // Store pending editor data
-  const policyPromise = new Promise<Policy>((resolve, reject) => {
-    pendingPolicyEditors.set(popupId, {
-      composeTabId: tabId,
-      initialPolicy,
-      sign,
-      resolve,
-      reject,
-    });
-  });
-
-  // Listen for window close
-  const closeListener = (closedWindowId: number) => {
-    if (closedWindowId === popupId) {
-      const pending = pendingPolicyEditors.get(popupId);
-      if (pending) {
-        pending.reject(new Error("window closed"));
-        pendingPolicyEditors.delete(popupId);
-      }
-      browser.windows.onRemoved.removeListener(closeListener);
-    }
-  };
-  browser.windows.onRemoved.addListener(closeListener);
-
-  try {
-    const newPolicy = await policyPromise;
-    if (sign) {
-      state.signId = newPolicy;
-    } else {
-      state.policy = newPolicy;
-    }
-  } catch {
-    // user cancelled
-  } finally {
-    if (sign) {
-      state.signWindowId = undefined;
-    } else {
-      state.configWindowId = undefined;
-    }
-    browser.windows.onRemoved.removeListener(closeListener);
-  }
-}
-
-async function handlePolicyEditorInit(windowId: number | undefined) {
-  if (windowId == null) return null;
-  const pending = pendingPolicyEditors.get(windowId);
-  if (!pending) return null;
-  return {
-    initialPolicy: pending.initialPolicy,
-    sign: pending.sign,
-  };
-}
-
-async function handlePolicyEditorDone(
-  windowId: number | undefined,
-  policy: Policy
-) {
-  if (windowId == null) return;
-  const pending = pendingPolicyEditors.get(windowId);
-  if (!pending) return;
-
-  pending.resolve(policy);
-  pendingPolicyEditors.delete(windowId);
-  await browser.windows.get(windowId).then(() =>
-    // Close the popup after saving
-    // Use a small delay to let the message response complete
-    setTimeout(() => {
-```
-
-<small>[Source: background.ts#L608-L677](https://github.com/encryption4all/postguard-tb-addon/blob/d2ec84d26ab52044c3057dd3aeb7c8e1e3bc26ce/src/background/background.ts#L608-L677)</small>
-
-### Message handler
-
-The background script routes `yiviPopupInit` and `yiviPopupDone` messages from the popup:
-
-```ts
-      return tabs[0]?.id;
-    };
-
-    switch (msg.type) {
-      case "queryMessageState":
-        console.log("[PostGuard] queryMessageState sender:", JSON.stringify({
-          tabId: sender.tab?.id,
-```
-
-<small>[Source: background.ts#L126-L132](https://github.com/encryption4all/postguard-tb-addon/blob/d2ec84d26ab52044c3057dd3aeb7c8e1e3bc26ce/src/background/background.ts#L126-L132)</small>
-
-### Yivi popup page
-
-The popup uses the SDK's `runYiviSession()` utility to handle the full Yivi flow, then sends the JWT back to the background:
-
-```ts
-async function init() {
-  const data = (await browser.runtime.sendMessage({
-    type: "yiviPopupInit",
-  })) as YiviPopupData | null;
-
-  if (!data) {
-    showError("Failed to initialize session.");
-    return;
-  }
-
-  // Update UI
-  if (data.sort === "Decryption") {
-    titleEl.textContent = browser.i18n.getMessage("displayMessageTitle");
-    subtitleEl.textContent = browser.i18n.getMessage("displayMessageHeading");
-  } else {
-    titleEl.textContent = "PostGuard — Sign";
-    subtitleEl.textContent = browser.i18n.getMessage("displayMessageQrPrefix");
-  }
-
-  if (data.senderId) {
-    senderEl.innerHTML = `From: <strong>${escapeHtml(data.senderId)}</strong>`;
-    senderEl.style.display = "block";
-  }
-
-  if (data.hints) {
-    for (const hint of data.hints) {
-      const badge = document.createElement("span");
-      badge.className = "hint-badge";
-      const label =
-        browser.i18n.getMessage(hint.t) || hint.t.split(".").pop() || hint.t;
-      badge.textContent = hint.v ? `${label}: ${hint.v}` : label;
-      hintsEl.appendChild(badge);
-    }
-  }
-
-  try {
-    // Start Yivi session via PKG
-    const resp = await fetch(`${data.hostname}/v2/request/start`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", ...data.header },
-      body: JSON.stringify({ con: data.con }),
-    });
-    if (!resp.ok) throw new Error(`Session start failed: ${resp.status}`);
-
-    const { sessionPtr, token } = await resp.json();
-    console.log("[PostGuard] Yivi session started, token:", token);
-    loadingEl.style.display = "none";
-
-    // Show QR code from the IRMA session pointer
-    showQrCode(sessionPtr);
-
-    // Poll IRMA server for session status, then retrieve JWT from PKG
-    await pollIrmaStatus(sessionPtr.u);
-    console.log("[PostGuard] IRMA session DONE, fetching JWT from PKG...");
-
-    // Fetch JWT from PKG (returned as plain text, not JSON)
-    const jwtResp = await fetch(
-      `${data.hostname}/v2/request/jwt/${token}`,
-      { headers: data.header }
-    );
-    if (!jwtResp.ok) throw new Error(`JWT fetch failed: ${jwtResp.status}`);
-    const jwt = await jwtResp.text();
-
-    console.log("[PostGuard] JWT received, sending to background");
-    await browser.runtime.sendMessage({ type: "yiviPopupDone", jwt });
-
-    // Auto-close after a short delay
-    setTimeout(async () => {
-      const win = await browser.windows.getCurrent();
-      browser.windows.remove(win.id);
-    }, 750);
-  } catch (e) {
-    console.error("[PostGuard] Yivi session error:", e);
-    showError(e instanceof Error ? e.message : "Yivi session failed.");
-  }
-}
-```
-
-<small>[Source: yivi-popup.ts#L21-L96](https://github.com/encryption4all/postguard-tb-addon/blob/d2ec84d26ab52044c3057dd3aeb7c8e1e3bc26ce/src/pages/yivi-popup/yivi-popup.ts#L21-L96)</small>
-
-## Email Encryption Flow
-
-With the session callback in place, the encryption flow intercepts the compose send event. This is the full `handleBeforeSend` handler from the Thunderbird addon:
-
-```ts
-      });
-      return encrypted || wasEncrypted;
-    }
-  } catch (e) {
-    console.warn("[PostGuard] shouldEncrypt error:", e);
-  }
-  return false;
-}
-
-async function isPGEncrypted(msgId: number): Promise<boolean> {
-  // Primary: check for encrypted attachment
-  const attachments = await browser.messages.listAttachments(msgId);
-  if (attachments.some((att) => att.name === "postguard.encrypted")) return true;
-
-  // Fallback: check for armor block in HTML body
-  try {
-    const full = await browser.messages.getFull(msgId);
-    const bodyHtml = findHtmlBody(full);
-    if (bodyHtml && extractArmoredPayload(bodyHtml)) return true;
-  } catch {
-    // ignore
-  }
-
-  return false;
-}
-
-// --- Alarm keepalive for onBeforeSend (MV3 anti-termination pattern) ---
-
-function keepAlive(name: string, promise: Promise<unknown>) {
-  const listener = (alarm: { name: string }) => {
-    if (alarm.name === name) {
-      console.log(`[PostGuard] Keepalive: waiting for ${name}`);
-    }
-  };
-  browser.alarms.create(name, { periodInMinutes: 0.25 });
-  browser.alarms.onAlarm.addListener(listener);
-
-  return promise.finally(() => {
-    browser.alarms.clear(name);
-    browser.alarms.onAlarm.removeListener(listener);
-  });
-}
-
-// --- onBeforeSend: encryption hook ---
-
-async function handleBeforeSend(tab: { id: number }, details: any) {
-  const state = composeTabs.get(tab.id);
-  if (!state?.encrypt) return;
-
-  // BCC check
-  if (details.bcc.length > 0) {
-    console.warn("[PostGuard] BCC not supported with encryption");
-    return { cancel: true };
-  }
-
-  // If policy editor is open, bring it to focus
-  if (state.configWindowId) {
-    await browser.windows.update(state.configWindowId, {
-      drawAttention: true,
-      focused: true,
-    });
-    return { cancel: true };
-  }
-
-  if (!pk) {
-    console.error("[PostGuard] No public key available, cannot encrypt");
-    notifyError("encryptionError");
-    return { cancel: true };
-  }
-
-  const { promise, resolve } = Promise.withResolvers<
-    { cancel?: boolean; details?: Partial<typeof details> } | void
-  >();
-
-  keepAlive("onBeforeSend", (async () => {
-    try {
-      const originalSubject = details.subject;
-      const date = new Date();
-      const timestamp = Math.round(date.getTime() / 1000);
-
-      // Build attachments list
-      const composeAttachments = await browser.compose.listAttachments(tab.id);
-      const attachmentData = await Promise.all(
-        composeAttachments.map(async (att) => {
-          const file = await browser.compose.getAttachmentFile(att.id) as unknown as File;
-          return {
-            name: file.name,
-            type: file.type,
-            data: await file.arrayBuffer(),
-          };
-        })
-      );
-
-      // Fetch threading headers if replying
-      let inReplyTo: string | undefined;
-      let references: string | undefined;
-      if (details.relatedMessageId) {
-        try {
-          const relFull = await browser.messages.getFull(details.relatedMessageId);
-          const relMsgId = relFull.headers["message-id"]?.[0];
-          if (relMsgId) {
-            inReplyTo = relMsgId;
-            const relRefs = relFull.headers["references"]?.[0];
-            references = relRefs ? `${relRefs} ${relMsgId}` : relMsgId;
-          }
-        } catch (e) {
-          console.warn("[PostGuard] Could not fetch related message headers:", e);
-        }
-      }
-
-      // Build inner MIME
-      const mimeData = buildInnerMime({
-        from: details.from,
-        to: [...details.to],
-        cc: [...details.cc],
-        subject: originalSubject,
-        body: details.body,
-        plainTextBody: details.plainTextBody,
-        isPlainText: details.isPlainText,
-        date,
-        inReplyTo,
-        references,
-        attachments: attachmentData,
-      });
-
-      // Build per-recipient policy
-      const customPolicies = state.policy;
-      const recipients = [...details.to, ...details.cc];
-      const sealPolicy: Record<string, { ts: number; con: Array<{ t: string; v: string }> }> = {};
-
-      for (const recipient of recipients) {
-        const id = toEmail(recipient);
-        if (customPolicies && customPolicies[id]) {
-          sealPolicy[id] = {
-            ts: timestamp,
-            con: customPolicies[id].map(({ t, v }) =>
-              t === EMAIL_ATTRIBUTE_TYPE ? { t, v: v.toLowerCase() } : { t, v }
-            ),
-          };
-        } else {
-          sealPolicy[id] = {
-            ts: timestamp,
-            con: [{ t: EMAIL_ATTRIBUTE_TYPE, v: id }],
-          };
-        }
-      }
-
-      // Get signing identity
-```
-
-<small>[Source: background.ts#L284-L431](https://github.com/encryption4all/postguard-tb-addon/blob/d2ec84d26ab52044c3057dd3aeb7c8e1e3bc26ce/src/background/background.ts#L284-L431)</small>
-
-The key steps are:
-1. Build attachments list from the compose tab
-2. Fetch threading headers if replying
-3. Build the inner MIME using `pg.email.buildMime()`
-4. Build recipients (with custom policies if configured)
-5. Encrypt with `pg.encrypt()` using a session callback that opens the Yivi popup
-6. Create the encrypted envelope with `pg.email.createEnvelope()`
-7. Replace the email body and subject with the envelope contents
-
-### BCC limitation
-
-PostGuard does not support BCC recipients. The Thunderbird addon blocks sending if any BCC recipients are present when encryption is enabled.
-
-### Sent copy management
-
-After sending, the addon stores the unencrypted MIME in a "PostGuard Sent" folder so the sender can read their own messages later:
-
-```ts
-        return handleOpenPolicyEditor(sender.tab?.windowId, false);
-      case "openSignEditor":
-        return handleOpenPolicyEditor(sender.tab?.windowId, true);
-      case "policyEditorInit":
-        return handlePolicyEditorInit(sender.tab?.windowId);
-      case "policyEditorDone":
-        return handlePolicyEditorDone(
-          sender.tab?.windowId,
-          msg.policy as Policy
-        );
-      case "yiviPopupInit":
-        return handleYiviPopupInit(sender.tab?.windowId);
-      case "yiviPopupDone":
-        return handleYiviPopupDone(
-          sender.tab?.windowId,
-          msg.jwt as string
-        );
-      case "decryptMessage":
-        return handleDecryptMessage(msg.messageId as number);
-      default:
-        return false;
-    }
-  }
-);
-
-browser.compose.onBeforeSend.addListener(handleBeforeSend);
-
-```
-
-<small>[Source: background.ts#L143-L169](https://github.com/encryption4all/postguard-tb-addon/blob/d2ec84d26ab52044c3057dd3aeb7c8e1e3bc26ce/src/background/background.ts#L143-L169)</small>
-
-## Email Decryption Flow
-
-```ts
-      } catch {}
-    }, 100)
-  ).catch(() => {});
-}
-
-// --- Yivi popup flow ---
-
 export async function createYiviPopup(
   con: AttributeCon,
   sort: KeySort,
@@ -565,111 +124,238 @@ export async function createYiviPopup(
     })
   ) as Promise<string>;
 }
+```
 
-async function handleYiviPopupInit(windowId: number | undefined) {
-  if (windowId == null) return null;
-  const pending = pendingYiviPopups.get(windowId);
-  if (!pending) return null;
-  return pending.data;
+<small>[Source: background.ts#L588-L637](https://github.com/encryption4all/postguard-tb-addon/blob/feat/implement-sdk/src/background/background.ts#L588-L637)</small>
+
+### Message handler
+
+The background script routes `yiviPopupInit` and `yiviPopupDone` messages from the popup:
+
+```ts
+switch (msg.type) {
+  // ...
+  case "yiviPopupInit":
+    return handleYiviPopupInit(sender.tab?.windowId);
+  case "yiviPopupDone":
+    return handleYiviPopupDone(
+      sender.tab?.windowId,
+      msg.jwt as string
+    );
+  // ...
 }
+```
 
-async function handleYiviPopupDone(
-  windowId: number | undefined,
-  jwt: string
-) {
-  if (windowId == null) return;
-  const pending = pendingYiviPopups.get(windowId);
-  if (!pending) return;
+<small>[Source: background.ts#L108-L137](https://github.com/encryption4all/postguard-tb-addon/blob/feat/implement-sdk/src/background/background.ts#L108-L137)</small>
 
-  pending.resolve(jwt);
-  pendingYiviPopups.delete(windowId);
-}
+### Yivi popup page
 
-// --- Decrypt message ---
+The popup uses the SDK's `runYiviSession()` to handle the full Yivi flow (QR code rendering + polling + JWT retrieval), then sends the JWT back to the background:
 
-async function handleDecryptMessage(messageId: number): Promise<{ ok: boolean; error?: string }> {
-  console.log("[PostGuard] Decrypt requested for message:", messageId);
+```ts
+import { runYiviSession } from "@e4a/pg-js";
 
-  if (!vk || !pgWasm) {
-    console.error("[PostGuard] pg-wasm or verification key not loaded");
-    notifyError("startupError");
-    return { ok: false, error: "startupError" };
+async function init() {
+  const data = (await browser.runtime.sendMessage({
+    type: "yiviPopupInit",
+  })) as YiviPopupData | null;
+
+  if (!data) {
+    showError("Failed to initialize session.");
+    return;
   }
 
   try {
-    const msg = await browser.messages.get(messageId);
-    const attachments = await browser.messages.listAttachments(messageId);
-    const pgAtt = attachments.find((att) => att.name === "postguard.encrypted");
+    loadingEl.style.display = "none";
 
-    let createReadable: () => Promise<ReadableStream<Uint8Array>>;
+    const jwt = await runYiviSession({
+      pkgUrl: data.hostname,
+      element: "#yivi-web-form",
+      con: data.con,
+      sort: data.sort as "Signing" | "Decryption",
+      headers: data.header,
+    });
 
-    if (pgAtt) {
-      // Primary: decrypt from attachment
-      createReadable = async () => {
-        const attFile = await browser.messages.getAttachmentFile(
-          messageId,
-          pgAtt.partName
-        );
-        return (attFile as any).stream();
-      };
-    } else {
-      // Fallback: extract armored payload from body
-      const full = await browser.messages.getFull(messageId);
-      const bodyHtml = findHtmlBody(full);
-      if (!bodyHtml) return;
+    await browser.runtime.sendMessage({ type: "yiviPopupDone", jwt });
 
-      const armoredBase64 = extractArmoredPayload(bodyHtml);
-      if (!armoredBase64) return;
-
-      console.log("[PostGuard] Found armored payload in body, length:", armoredBase64.length);
-      const binaryString = atob(armoredBase64);
-      const bytes = new Uint8Array(binaryString.length);
-      for (let i = 0; i < binaryString.length; i++) {
-        bytes[i] = binaryString.charCodeAt(i);
-      }
-      createReadable = async () =>
-        new ReadableStream<Uint8Array>({
-          start(controller) {
-            controller.enqueue(bytes);
-            controller.close();
-          },
-        });
+    // Auto-close after a short delay
+    setTimeout(async () => {
+      const win = await browser.windows.getCurrent();
+      browser.windows.remove(win.id);
+    }, 750);
+  } catch (e) {
+    showError(e instanceof Error ? e.message : "Yivi session failed.");
+  }
+}
 ```
 
-<small>[Source: background.ts#L680-L806](https://github.com/encryption4all/postguard-tb-addon/blob/d2ec84d26ab52044c3057dd3aeb7c8e1e3bc26ce/src/background/background.ts#L680-L806)</small>
+<small>[Source: yivi-popup.ts#L23-L81](https://github.com/encryption4all/postguard-tb-addon/blob/feat/implement-sdk/src/pages/yivi-popup/yivi-popup.ts#L23-L81)</small>
+
+## Email Encryption Flow
+
+With the session callback in place, the encryption flow intercepts the compose send event. The key steps are:
+
+1. Build attachments list from the compose tab
+2. Fetch threading headers if replying
+3. Build the inner MIME using `pg.email.buildMime()`
+4. Build recipients (with custom policies if configured)
+5. Create the `Sealed` builder with `pg.encrypt()` using a session callback
+6. Create the encrypted envelope with `pg.email.createEnvelope()`
+7. Replace the email body and subject with the envelope contents
+
+```ts
+// Build inner MIME using SDK
+const mimeData = pg!.email.buildMime({
+  from: details.from,
+  to: [...details.to],
+  cc: [...details.cc],
+  subject: originalSubject,
+  htmlBody: details.isPlainText ? undefined : details.body,
+  plainTextBody: details.isPlainText ? details.plainTextBody : undefined,
+  date,
+  inReplyTo,
+  references,
+  attachments: attachmentData,
+});
+
+// Build recipients with custom policies if set
+const pgRecipients = recipients.map((r: string) => {
+  const id = toEmail(r);
+  if (customPolicies && customPolicies[id]) {
+    return pg!.recipient.withPolicy(
+      id,
+      customPolicies[id].map(({ t, v }) =>
+        t === EMAIL_ATTRIBUTE_TYPE ? { t, v: v.toLowerCase() } : { t, v }
+      )
+    );
+  }
+  return pg!.recipient.email(id);
+});
+
+// Build sealed encryption builder (lazy — encrypts when createEnvelope calls toBytes)
+const sealed = pg!.encrypt({
+  sign: pg!.sign.session(
+    async ({ con, sort }) => createYiviPopup(con as AttributeCon, sort as KeySort),
+    { senderEmail: from }
+  ),
+  recipients: pgRecipients,
+  data: mimeData,
+});
+
+// Create encrypted email envelope using SDK (encrypts + builds placeholder HTML)
+const envelope = await pg!.email.createEnvelope({
+  sealed,
+  from: details.from,
+});
+
+// Add encrypted attachment and replace body/subject
+await browser.compose.addAttachment(tab.id, { file: envelope.attachment });
+resolve({
+  details: {
+    subject: envelope.subject,
+    body: envelope.htmlBody,
+    plainTextBody: envelope.plainTextBody,
+  },
+});
+```
+
+<small>[Source: background.ts#L331-L405](https://github.com/encryption4all/postguard-tb-addon/blob/feat/implement-sdk/src/background/background.ts#L331-L405)</small>
+
+### BCC limitation
+
+PostGuard does not support BCC recipients. The Thunderbird addon blocks sending if any BCC recipients are present when encryption is enabled.
+
+### Sent copy management
+
+After sending, the addon stores the unencrypted MIME in a "PostGuard Sent" folder so the sender can read their own messages later.
+
+## Email Decryption Flow
+
+The decryption flow extracts ciphertext from a received email, decrypts it with a session callback, and replaces the encrypted message with the decrypted one.
 
 The key steps are:
 1. Extract ciphertext from attachments or HTML body using `pg.email.extractCiphertext()`
-2. Decrypt with `pg.decrypt()` using a session callback
-3. Build sender identity badges from the result
+2. Open and decrypt with `pg.open({ data }).decrypt()` using a session callback
+3. Build sender identity badges from the `FriendlySender` result
 4. Inject threading headers and an `X-PostGuard` marker into the decrypted MIME
 5. Import the decrypted message back into the folder and delete the encrypted original
 
-## Detecting PostGuard Emails
-
-Check if a message is PostGuard-encrypted by looking for the attachment or armored payload:
-
 ```ts
-  });
-  await browser.composeAction.setTitle({
-    tabId,
-    title: enabled
-      ? browser.i18n.getMessage("encryptionEnabled")
-      : browser.i18n.getMessage("encryptionDisabled"),
-  });
+// Extract ciphertext using SDK
+const ciphertext = pg.email.extractCiphertext({
+  htmlBody: htmlBody ?? undefined,
+  attachments: attData,
+});
+
+if (!ciphertext) {
+  return { ok: false, error: "decryptionError" };
 }
 
-// Initialize state for any existing compose tabs on startup
-const existingTabs = await browser.tabs.query({ type: "messageCompose" });
-for (const tab of existingTabs) {
-  if (tab.id != null) {
-    const encrypt = await shouldEncrypt(tab.id);
-    composeTabs.set(tab.id, { encrypt });
-    await updateComposeActionIcon(tab.id);
-  }
+// Decrypt using SDK: open sealed data, then decrypt with session callback
+const opened = pg.open({ data: ciphertext });
+const result = await opened.decrypt({
+  recipient: myAddresses[0],
+  session: async ({ con, sort, hints, senderId }) => {
+    return createYiviPopup(
+      con as AttributeCon,
+      sort as KeySort,
+      hints as AttributeCon | undefined,
+      senderId
+    );
+  },
+}) as DecryptDataResult;
+
+const plaintext = new TextDecoder().decode(result.plaintext);
+
+// Build badges from sender identity (FriendlySender format)
+const sender = result.sender;
+const badges = (sender?.attributes ?? []).map(
+  ({ type: t, value: v }) => ({
+    type: typeToImage(t),
+    value: v ?? "",
+  })
+);
+
+// Inject threading headers and X-PostGuard marker
+let markedPlaintext = plaintext;
+if (Object.keys(threadingHeaders).length > 0) {
+  markedPlaintext = pg.email.injectMimeHeaders(
+    markedPlaintext, threadingHeaders, threadingRemove
+  );
+}
+markedPlaintext = pg.email.injectMimeHeaders(
+  markedPlaintext, { "X-PostGuard": "decrypted" }
+);
+
+// Import decrypted message into the original folder
+const file = new File([markedPlaintext], "decrypted.eml", { type: "text/plain" });
+const importedMsg = await browser.messages.import(file, msg.folder.id);
 ```
 
-<small>[Source: background.ts#L249-L265](https://github.com/encryption4all/postguard-tb-addon/blob/d2ec84d26ab52044c3057dd3aeb7c8e1e3bc26ce/src/background/background.ts#L249-L265)</small>
+<small>[Source: background.ts#L693-L771](https://github.com/encryption4all/postguard-tb-addon/blob/feat/implement-sdk/src/background/background.ts#L693-L771)</small>
+
+## Detecting PostGuard Emails
+
+Check if a message is PostGuard-encrypted by looking for the attachment or armored payload marker:
+
+```ts
+async function isPGEncrypted(msgId: number): Promise<boolean> {
+  const attachments = await browser.messages.listAttachments(msgId);
+  if (attachments.some((att) => att.name === "postguard.encrypted")) return true;
+
+  try {
+    const full = await browser.messages.getFull(msgId);
+    const bodyHtml = findHtmlBody(full);
+    if (bodyHtml && bodyHtml.includes("-----BEGIN POSTGUARD MESSAGE-----")) return true;
+  } catch {
+    // ignore
+  }
+
+  return false;
+}
+```
+
+<small>[Source: background.ts#L232-L248](https://github.com/encryption4all/postguard-tb-addon/blob/feat/implement-sdk/src/background/background.ts#L232-L248)</small>
 
 ## Outlook-Specific Notes
 
@@ -746,40 +432,11 @@ function initializeDialog(): void {
     return;
   }
 
-  // Set title based on sort
-  const title = document.getElementById("pg-dialog-title");
-  const heading = document.getElementById("pg-dialog-heading");
-
-  if (data.sort === "Decryption") {
-    if (title) title.textContent = "Decrypt Message";
-    if (heading) heading.textContent = "Scan the QR code below with your Yivi app to prove your identity and decrypt this message.";
-  } else {
-    if (title) title.textContent = "Sign Identity";
-    if (heading) heading.textContent = "Scan the QR code below with your Yivi app to attach your verified identity to this message.";
-  }
-
-  // Show sender info
-  if (data.senderId) {
-    const senderInfo = document.getElementById("pg-sender-info");
-    const senderEmail = document.getElementById("pg-sender-email");
-    if (senderInfo) senderInfo.style.display = "block";
-    if (senderEmail) senderEmail.textContent = data.senderId;
-  }
-
-  // Fill attribute table
-  fillAttributeTable(data);
-
   // Initialize Yivi
   const yivi = new YiviCore({
     debugging: false,
     element: "#yivi-web-form",
     language: navigator.language.startsWith("nl") ? "nl" : "en",
-    translations: {
-      header: "",
-      helper: data.sort === "Decryption"
-        ? "Scan with your Yivi app to decrypt"
-        : "Scan with your Yivi app to sign",
-    },
     state: {
       serverSentEvents: false,
       polling: {
@@ -813,18 +470,12 @@ function initializeDialog(): void {
   yivi
     .start()
     .then((jwt: string) => {
-      // Send JWT back to the parent window
       Office.context.ui.messageParent(JSON.stringify({ jwt }));
     })
     .catch((e: Error) => {
-      console.error("[PostGuard Dialog] Yivi error:", e);
       Office.context.ui.messageParent(JSON.stringify({ error: e.message || "Yivi authentication failed" }));
     });
 }
-
-Office.onReady(() => {
-  initializeDialog();
-});
 ```
 
 <small>[Source: dialog.ts#L50-L137](https://github.com/encryption4all/postguard-outlook-addon/blob/dd0073b568a94524e2658dd44e2851d2dccfac82/src/dialog/dialog.ts#L50-L137)</small>
@@ -837,4 +488,4 @@ Email extension environments have specific bundling requirements:
 - Dynamic imports: avoid where possible. Use static imports or extension-compatible loading patterns.
 - Content Security Policy: your extension manifest must allow WASM execution (`'wasm-unsafe-eval'` in Manifest V3).
 - File size: the `@e4a/pg-wasm` module is around 2 MB. Load it eagerly at startup rather than on first use.
-- EventSource polyfill: the Yivi client uses `EventSource` for server-sent events. In Thunderbird, you may need to shim this.
+- EventSource polyfill: the Yivi client uses `EventSource` for server-sent events. In Thunderbird, you may need to shim this module in your bundler since it is not used at runtime (SSE is disabled in favor of polling).

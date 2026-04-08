@@ -143,43 +143,36 @@ This means: "The recipient must prove they own `alice@example.com` AND disclose 
 The SDK provides helper methods that build these policies automatically. The SvelteKit example uses `pg.recipient.email()` and `pg.recipient.emailDomain()`:
 
 ```ts
-		method: 'POST',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${apiKey}`
-		},
-		body: JSON.stringify({
-			pubSignId: [{ t: 'pbdf.sidn-pbdf.email.email' }]
-		})
-	});
-	if (!response.ok) {
-		const text = await response.text();
-		throw new Error(`Failed to fetch signing keys: ${response.status} ${text}`);
+const sealed = pg.encrypt({
+  files,
+  recipients: [
+    pg.recipient.email(citizen.email),
+    pg.recipient.emailDomain(organisation.email)
+  ],
+  sign: pg.sign.apiKey(apiKey),
+});
 ```
 
-<small>[Source: encryption.ts#L20-L31](https://github.com/encryption4all/postguard-examples/blob/6d538923ade9b013222685bec1f4588f610ccf86/pg-sveltekit/src/lib/postguard/encryption.ts#L20-L31)</small>
+<small>[Source: encryption.ts#L26-L35](https://github.com/encryption4all/postguard-examples/blob/d6c7f01d3cb63d84e94b1e59079b0d80d748d23b/pg-sveltekit/src/lib/postguard/encryption.ts#L26-L35)</small>
 
 The Thunderbird addon uses `pg.recipient.withPolicy()` for custom per-recipient policies:
 
 ```ts
-      const timestamp = Math.round(date.getTime() / 1000);
-
-      // Build attachments list
-      const composeAttachments = await browser.compose.listAttachments(tab.id);
-      const attachmentData = await Promise.all(
-        composeAttachments.map(async (att) => {
-          const file = await browser.compose.getAttachmentFile(att.id) as unknown as File;
-          return {
-            name: file.name,
-            type: file.type,
-            data: await file.arrayBuffer(),
-          };
-        })
-      );
-
+const pgRecipients = recipients.map((r: string) => {
+  const id = toEmail(r);
+  if (customPolicies && customPolicies[id]) {
+    return pg!.recipient.withPolicy(
+      id,
+      customPolicies[id].map(({ t, v }) =>
+        t === EMAIL_ATTRIBUTE_TYPE ? { t, v: v.toLowerCase() } : { t, v }
+      )
+    );
+  }
+  return pg!.recipient.email(id);
+});
 ```
 
-<small>[Source: background.ts#L362-L376](https://github.com/encryption4all/postguard-tb-addon/blob/d2ec84d26ab52044c3057dd3aeb7c8e1e3bc26ce/src/background/background.ts#L362-L376)</small>
+<small>[Source: background.ts#L348-L359](https://github.com/encryption4all/postguard-tb-addon/blob/feat/implement-sdk/src/background/background.ts#L348-L359)</small>
 
 ::: info Attribute identifiers
 Attribute identifiers like `pbdf.sidn-pbdf.email.email` follow the Yivi attribute scheme. `pbdf` is the scheme, `sidn-pbdf` is the issuer, `email` is the credential, and the final `email` is the specific attribute within that credential.
@@ -212,21 +205,20 @@ The sender proves their email address via Yivi, just like the recipient does dur
 ### API key signing (PostGuard for Business)
 For automated or server-side encryption, an API key replaces the Yivi step. The organization operating the sender's application is trusted to authenticate the sender through its own mechanisms.
 
-When the recipient decrypts, the SDK returns a `sender` object containing the verified identity attributes of the sender. The Thunderbird addon extracts sender attributes to build identity badges:
+When the recipient decrypts, the SDK returns a `sender` field with type `FriendlySender` containing the verified identity attributes of the sender. The Thunderbird addon extracts sender attributes to build identity badges:
 
 ```ts
-  if (!pending) return null;
-  return pending.data;
-}
-
-async function handleYiviPopupDone(
-  windowId: number | undefined,
-  jwt: string
-) {
-  if (windowId == null) return;
+// Build badges from sender identity (FriendlySender format)
+const sender = result.sender;
+const badges = (sender?.attributes ?? []).map(
+  ({ type: t, value: v }) => ({
+    type: typeToImage(t),
+    value: v ?? "",
+  })
+);
 ```
 
-<small>[Source: background.ts#L742-L750](https://github.com/encryption4all/postguard-tb-addon/blob/d2ec84d26ab52044c3057dd3aeb7c8e1e3bc26ce/src/background/background.ts#L742-L750)</small>
+<small>[Source: background.ts#L725-L732](https://github.com/encryption4all/postguard-tb-addon/blob/feat/implement-sdk/src/background/background.ts#L725-L732)</small>
 
 ## Wire format
 

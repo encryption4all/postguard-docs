@@ -61,16 +61,21 @@ Requires `cryptifyUrl` to be set in the constructor.
 Decrypts raw ciphertext bytes (e.g. from an encrypted email). The Thunderbird addon extracts ciphertext from the email and decrypts using a session callback:
 
 ```ts
-const result = await pg.decrypt({
-  data: ciphertext,
+const opened = pg.open({ data: ciphertext });
+const result = await opened.decrypt({
   recipient: myAddresses[0],
   session: async ({ con, sort, hints, senderId }) => {
-    return createYiviPopup(con as AttributeCon, sort as KeySort, hints, senderId);
+    return createYiviPopup(
+      con as AttributeCon,
+      sort as KeySort,
+      hints as AttributeCon | undefined,
+      senderId
+    );
   },
 }) as DecryptDataResult;
 ```
 
-<small>[Source: background.ts#L727-L738](https://github.com/encryption4all/postguard-tb-addon/blob/c1eadec67b68082bce23ba3c1d387c78877dee8a/src/background/background.ts#L727-L738)</small>
+<small>[Source: background.ts#L710-L721](https://github.com/encryption4all/postguard-tb-addon/blob/feat/implement-sdk/src/background/background.ts#L710-L721)</small>
 
 ### `DecryptDataResult`
 
