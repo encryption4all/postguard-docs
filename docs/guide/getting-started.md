@@ -84,30 +84,37 @@ PG_API_KEY=PG-API-your-key-here
 
 ### Encrypting raw data for email
 
-For email integration, the Thunderbird addon uses `pg.encrypt()` with raw MIME bytes instead of files. It builds the MIME, encrypts with a Yivi session callback, and wraps the result in an envelope:
+For email integration, the Thunderbird addon uses standalone SDK helpers in the background script to build the MIME, then delegates encryption to a popup window that creates its own PostGuard instance with element-based Yivi:
 
 ```ts
-// Build inner MIME (subject, body, attachments all in one)
-const mimeData = pg!.email.buildMime({
+import { buildMime } from "@e4a/pg-js";
+
+// Background: build inner MIME using standalone helper (no PostGuard instance needed)
+const mimeData = buildMime({
   from: details.from,
   to: [...details.to],
+  cc: [...details.cc],
   subject: originalSubject,
-  htmlBody: details.body,
+  htmlBody: details.isPlainText ? undefined : details.body,
+  plainTextBody: details.isPlainText ? details.plainTextBody : undefined,
+  date,
   attachments: attachmentData,
 });
 
-// Encrypt and wrap in email envelope
-const envelope = await pg!.email.createEnvelope({
-  sealed: pg!.encrypt({
-    data: mimeData,
-    recipients: pgRecipients,
-    sign: pg!.sign.session(callback, { senderEmail: from }),
-  }),
+// Background: delegate encryption to popup, which creates its own pg instance
+const result = await openCryptoPopup({
+  operation: "encrypt",
+  config: { pkgUrl: PKG_URL!, cryptifyUrl: CRYPTIFY_URL, headers: PG_CLIENT_HEADER },
+  mimeDataBase64: toBase64(mimeData),
+  recipients: serializedRecipients,
+  senderEmail: from,
   from: details.from,
 });
 ```
 
-<small>[Source: background.ts#L331-L390](https://github.com/encryption4all/postguard-tb-addon/blob/feat/implement-sdk/src/background/background.ts#L331-L390)</small>
+<small>[Source: background.ts#L382-L434](https://github.com/encryption4all/postguard-tb-addon/blob/57234eebd32d64bd011086fe89ecdd7ac40fc15d/src/background/background.ts#L382-L434)</small>
+
+See the [email addon integration guide](/integrations/email-addon) for the full popup-owns-crypto pattern.
 
 ## 3. Decrypt
 
@@ -170,24 +177,20 @@ No Node.js polyfills are needed. The SDK handles all browser compatibility inter
 
 ### Browser extensions
 
-Browser extensions often cannot use dynamic `import()` for WASM modules. The Thunderbird addon loads WASM indirectly and passes it to the constructor:
+The SDK inlines its WASM binary as base64 at build time, so no WASM loader plugins or file copying is needed. The Thunderbird addon bundles with esbuild and the WASM is included automatically:
 
 ```ts
-const pgWasmPath = "./pg-wasm/load.js";
-const modPromise = import(/* @vite-ignore */ pgWasmPath).then((mod: any) => {
-  console.log("[PostGuard] pg-wasm loaded");
-  return mod as WasmModule;
-});
+// Background script: only import standalone helpers (no WASM needed here)
+import { buildMime, extractCiphertext, injectMimeHeaders } from "@e4a/pg-js";
 
-// Later, pass it to PostGuard:
-pg = new PostGuard({
-  pkgUrl: PKG_URL,
-  headers: getClientHeader(),
-  wasm: await modPromise,
-});
+// Popup script: full PostGuard with WASM + Yivi (instantiated only when needed)
+import { PostGuard } from "@e4a/pg-js";
+const pg = new PostGuard(data.config);
 ```
 
-<small>[Source: background.ts#L66-L73](https://github.com/encryption4all/postguard-tb-addon/blob/feat/implement-sdk/src/background/background.ts#L66-L73)</small>
+<small>[Source: background.ts#L3](https://github.com/encryption4all/postguard-tb-addon/blob/57234eebd32d64bd011086fe89ecdd7ac40fc15d/src/background/background.ts#L3), [yivi-popup.ts#L4](https://github.com/encryption4all/postguard-tb-addon/blob/57234eebd32d64bd011086fe89ecdd7ac40fc15d/src/pages/yivi-popup/yivi-popup.ts#L4)</small>
+
+Your extension manifest must allow WASM execution (`'wasm-unsafe-eval'` in Manifest V3 CSP). See the [email addon guide](/integrations/email-addon#bundling-considerations) for full bundling details.
 
 ## Next Steps
 
