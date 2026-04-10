@@ -72,7 +72,7 @@ export const CRYPTIFY_URL = env.PUBLIC_CRYPTIFY_URL || 'https://fileshare.stagin
 Create a module that initializes PostGuard and wraps the encryption call:
 
 ```ts
-import { PostGuard } from '@e4a/postguard-js';
+import { PostGuard } from '@e4a/pg-js';
 import type { CitizenRecipient, OrganisationRecipient } from '$lib/types';
 import { PKG_URL, CRYPTIFY_URL } from '$lib/config';
 
@@ -163,8 +163,8 @@ async function handleSend() {
 A page that decrypts files from a Cryptify UUID. The UUID and recipient can come from URL query parameters (as provided in Cryptify notification emails):
 
 ```ts
-import { PostGuard, IdentityMismatchError } from '@e4a/postguard-js';
-import type { DecryptFileResult } from '@e4a/postguard-js';
+import { PostGuard, IdentityMismatchError } from '@e4a/pg-js';
+import type { DecryptFileResult } from '@e4a/pg-js';
 import { PKG_URL, CRYPTIFY_URL } from '$lib/config';
 
 const pg = new PostGuard({ pkgUrl: PKG_URL, cryptifyUrl: CRYPTIFY_URL });

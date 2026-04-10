@@ -75,7 +75,7 @@ const result = await opened.decrypt({
 }) as DecryptDataResult;
 ```
 
-<small>[Source: background.ts#L710-L721](https://github.com/encryption4all/postguard-tb-addon/blob/feat/implement-sdk/src/background/background.ts#L710-L721)</small>
+<small>[Source: background.ts#L710-L721](https://github.com/encryption4all/postguard-tb-addon/blob/26b8433efc8997bc1fe614f532caf17fb94b4a70/src/background/background.ts#L710-L721)</small>
 
 ### `DecryptDataResult`
 
@@ -84,9 +84,24 @@ const result = await opened.decrypt({
 | `plaintext` | `Uint8Array` | The decrypted data |
 | `sender` | `FriendlySender \| null` | Verified sender identity |
 
+### Decrypt parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `element` | `string` | No* | CSS selector for Yivi QR code container |
+| `session` | `SessionCallback` | No* | Custom session callback for non-browser environments |
+| `recipient` | `string` | No | Email of the recipient to decrypt for (required if multiple recipients) |
+| `enableCache` | `boolean` | No | Cache the Yivi JWT so repeated decryptions don't require re-scanning the QR code |
+
+*Provide either `element` or `session`. If neither is provided, the SDK throws a `DecryptionError`.
+
 ## Recipient selection
 
 When the ciphertext was encrypted for multiple recipients, the SDK needs to know which recipient key to use. Pass the `recipient` parameter with the email address of the intended recipient. If there is only one recipient in the ciphertext, the parameter can be omitted.
+
+## JWT caching
+
+When `enableCache` is `true`, the SDK caches the JWT from a successful Yivi session. Subsequent `decrypt()` calls reuse the cached JWT instead of starting a new Yivi session, as long as the JWT has not expired. This is useful when decrypting multiple messages in a row for the same recipient.
 
 ## Sender identity
 

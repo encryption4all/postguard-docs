@@ -57,13 +57,32 @@ const decrypted = await opened.decrypt({
 
 <small>[Source: +page.svelte#L47-L51](https://github.com/encryption4all/postguard-examples/blob/d6c7f01d3cb63d84e94b1e59079b0d80d748d23b/pg-sveltekit/src/routes/download/+page.svelte#L47-L51)</small>
 
+The PostGuard website uses Yivi signing with optional extra attributes and sender encryption:
+
+```ts
+const sign = pg.sign.yivi({
+  element: '#crypt-irma-qr',
+  attributes: [
+    { t: 'pbdf.gemeente.personalData.fullname', optional: true },
+    { t: 'pbdf.sidn-pbdf.mobilenumber.mobilenumber', optional: true },
+    { t: 'pbdf.gemeente.personalData.dateofbirth', optional: true },
+  ],
+  includeSender: true,
+});
+```
+
+The sender's email is always requested automatically. Attributes marked `optional: true` are presented to the user as optional disclosures: the user can choose to skip them during the Yivi session. Non-optional attributes must be disclosed for the session to succeed.
+
+When `includeSender` is `true`, the sender's identity is added to the encryption policy so the sender can also decrypt their own message.
+
 ### Parameters
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `element` | `string` | Yes | CSS selector for the QR code container |
-| `senderEmail` | `string` | Yes | The sender's email address to prove |
-| `includeSender` | `boolean` | No | Also encrypt for the sender (default: `false`) |
+| `senderEmail` | `string` | No | The sender's email address to prove |
+| `attributes` | `Array<{ t, v?, optional? }>` | No | Extra attributes to request (e.g. name, phone). Email is always included automatically. |
+| `includeSender` | `boolean` | No | Also encrypt for the sender so they can decrypt their own message (default: `false`) |
 
 ## Session Callback
 
@@ -82,7 +101,7 @@ const sealed = pg!.encrypt({
 });
 ```
 
-<small>[Source: background.ts#L372-L379](https://github.com/encryption4all/postguard-tb-addon/blob/feat/implement-sdk/src/background/background.ts#L372-L379)</small>
+<small>[Source: background.ts#L372-L379](https://github.com/encryption4all/postguard-tb-addon/blob/26b8433efc8997bc1fe614f532caf17fb94b4a70/src/background/background.ts#L372-L379)</small>
 
 For decryption, the same pattern with a session callback:
 
@@ -101,7 +120,7 @@ const result = await opened.decrypt({
 }) as DecryptDataResult;
 ```
 
-<small>[Source: background.ts#L710-L721](https://github.com/encryption4all/postguard-tb-addon/blob/feat/implement-sdk/src/background/background.ts#L710-L721)</small>
+<small>[Source: background.ts#L710-L721](https://github.com/encryption4all/postguard-tb-addon/blob/26b8433efc8997bc1fe614f532caf17fb94b4a70/src/background/background.ts#L710-L721)</small>
 
 ### The callback receives
 
@@ -169,3 +188,5 @@ See the [Email Addon Integration](/integrations/email-addon) guide for the full 
 ## Decryption Authentication
 
 Decryption also requires identity verification. The same `element` and `session` patterns apply. You must provide either `element` or `session` when calling `opened.decrypt()`. If neither is provided, the SDK throws a `DecryptionError`.
+
+Pass `enableCache: true` to cache the Yivi JWT across multiple `decrypt()` calls. This avoids forcing the user to scan a QR code for every message when decrypting a batch. See [Decryption: JWT caching](/sdk/decryption#jwt-caching) for details.

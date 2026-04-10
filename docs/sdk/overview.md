@@ -50,7 +50,6 @@ const pg = new PostGuard({
 | `pkgUrl` | `string` | Yes | URL of the PKG server |
 | `cryptifyUrl` | `string` | No | URL of the Cryptify file storage service. Required for `sealed.upload()` and `pg.open({ uuid })`. |
 | `headers` | `Record<string, string>` | No | Custom HTTP headers included in all requests to PKG and Cryptify |
-| `wasm` | `WasmModule` | No | Pre-loaded `@e4a/pg-wasm` module. By default the SDK dynamically imports it. Use this in environments like Thunderbird where dynamic WASM import does not work. |
 
 ## Encrypt and Decrypt
 
@@ -81,7 +80,7 @@ The `PostGuard` instance exposes builder methods for constructing sign methods a
 | Method | Returns | Use case |
 |--------|---------|----------|
 | `pg.sign.apiKey(key)` | `ApiKeySign` | Server-side or trusted environments |
-| `pg.sign.yivi({ element, senderEmail })` | `YiviSign` | Browser apps with Yivi QR widget |
+| `pg.sign.yivi({ element, senderEmail?, attributes?, includeSender? })` | `YiviSign` | Browser apps with Yivi QR widget |
 | `pg.sign.session(callback, { senderEmail })` | `SessionSign` | Extensions, custom Yivi flows |
 
 See [Authentication Methods](/sdk/auth-methods) for details.

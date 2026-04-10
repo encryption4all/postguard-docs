@@ -34,7 +34,7 @@ The SDK bundles or manages all its dependencies internally. You do not need to i
 Create a PostGuard instance and encrypt files for delivery. This module from the SvelteKit example initializes the client and uses the new `Sealed` builder:
 
 ```ts
-import { PostGuard } from '@e4a/postguard-js';
+import { PostGuard } from '@e4a/pg-js';
 import type { CitizenRecipient, OrganisationRecipient } from '$lib/types';
 import { PKG_URL, CRYPTIFY_URL } from '$lib/config';
 
@@ -121,8 +121,8 @@ See the [email addon integration guide](/integrations/email-addon) for the full 
 The SvelteKit example decrypts files from a Cryptify UUID using the Yivi QR widget:
 
 ```ts
-import { PostGuard, IdentityMismatchError } from '@e4a/postguard-js';
-import type { DecryptFileResult } from '@e4a/postguard-js';
+import { PostGuard, IdentityMismatchError } from '@e4a/pg-js';
+import type { DecryptFileResult } from '@e4a/pg-js';
 
 const pg = new PostGuard({ pkgUrl: PKG_URL, cryptifyUrl: CRYPTIFY_URL });
 

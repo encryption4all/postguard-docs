@@ -172,7 +172,7 @@ const pgRecipients = recipients.map((r: string) => {
 });
 ```
 
-<small>[Source: background.ts#L348-L359](https://github.com/encryption4all/postguard-tb-addon/blob/feat/implement-sdk/src/background/background.ts#L348-L359)</small>
+<small>[Source: background.ts#L348-L359](https://github.com/encryption4all/postguard-tb-addon/blob/26b8433efc8997bc1fe614f532caf17fb94b4a70/src/background/background.ts#L348-L359)</small>
 
 ::: info Attribute identifiers
 Attribute identifiers like `pbdf.sidn-pbdf.email.email` follow the Yivi attribute scheme. `pbdf` is the scheme, `sidn-pbdf` is the issuer, `email` is the credential, and the final `email` is the specific attribute within that credential.
@@ -218,7 +218,7 @@ const badges = (sender?.attributes ?? []).map(
 );
 ```
 
-<small>[Source: background.ts#L725-L732](https://github.com/encryption4all/postguard-tb-addon/blob/feat/implement-sdk/src/background/background.ts#L725-L732)</small>
+<small>[Source: background.ts#L725-L732](https://github.com/encryption4all/postguard-tb-addon/blob/26b8433efc8997bc1fe614f532caf17fb94b4a70/src/background/background.ts#L725-L732)</small>
 
 ## Wire format
 

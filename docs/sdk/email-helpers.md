@@ -1,13 +1,22 @@
 # Email Helpers
 
-The SDK includes email helper methods on `pg.email.*` for building and parsing PostGuard-encrypted emails. All examples below come from the [Thunderbird addon](https://github.com/encryption4all/postguard-tb-addon).
+The SDK includes email helper methods for building and parsing PostGuard-encrypted emails. They are available both as instance methods on `pg.email.*` and as standalone imports from `@e4a/pg-js`. The standalone imports are useful in contexts like extension background scripts where you don't need a full PostGuard instance. All examples below come from the [Thunderbird addon](https://github.com/encryption4all/postguard-tb-addon).
+
+```ts
+// Standalone imports (no PostGuard instance needed)
+import { buildMime, extractCiphertext, injectMimeHeaders, createEnvelope } from '@e4a/pg-js';
+
+// Or use instance methods
+pg.email.buildMime(...)
+pg.email.extractCiphertext(...)
+```
 
 ## Overview
 
 Encrypting an email with PostGuard follows this workflow:
 
 ```
-1. Build inner MIME    -->  pg.email.buildMime()
+1. Build inner MIME    -->  buildMime()  or  pg.email.buildMime()
 2. Encrypt the MIME    -->  pg.encrypt({ data: mimeBytes })
 3. Create envelope     -->  pg.email.createEnvelope({ sealed, from })
 4. Send the envelope via your email client / API
@@ -16,7 +25,7 @@ Encrypting an email with PostGuard follows this workflow:
 Decrypting reverses the process:
 
 ```
-1. Extract ciphertext  -->  pg.email.extractCiphertext()
+1. Extract ciphertext  -->  extractCiphertext()  or  pg.email.extractCiphertext()
 2. Open + decrypt      -->  pg.open({ data }).decrypt({ session })
 3. Parse the plaintext MIME
 ```
@@ -28,7 +37,7 @@ Constructs a MIME message from structured input. Returns the raw MIME bytes as a
 The Thunderbird addon builds the inner MIME from compose details:
 
 ```ts
-const mimeData = pg!.email.buildMime({
+const mimeData = buildMime({
   from: details.from,
   to: [...details.to],
   cc: [...details.cc],
@@ -42,7 +51,7 @@ const mimeData = pg!.email.buildMime({
 });
 ```
 
-<small>[Source: background.ts#L331-L342](https://github.com/encryption4all/postguard-tb-addon/blob/feat/implement-sdk/src/background/background.ts#L331-L342)</small>
+<small>[Source: background.ts#L331-L342](https://github.com/encryption4all/postguard-tb-addon/blob/26b8433efc8997bc1fe614f532caf17fb94b4a70/src/background/background.ts#L331-L342)</small>
 
 ### Parameters
 
@@ -74,17 +83,23 @@ For small payloads (under 100 KB), the encrypted data is also embedded as an arm
 The Thunderbird addon creates the envelope in one call:
 
 ```ts
-const envelope = await pg!.email.createEnvelope({
-  sealed: pg!.encrypt({
-    data: mimeData,
-    recipients: pgRecipients,
-    sign: pg!.sign.session(callback, { senderEmail: from }),
+const sealed = pg.encrypt({
+  sign: pg.sign.yivi({
+    element: "#yivi-web-form",
+    senderEmail: data.senderEmail,
   }),
-  from: details.from,
+  recipients,
+  data: mimeData,
+});
+
+const envelope = await pg.email.createEnvelope({
+  sealed,
+  from: data.from,
+  websiteUrl: data.websiteUrl,
 });
 ```
 
-<small>[Source: background.ts#L372-L390](https://github.com/encryption4all/postguard-tb-addon/blob/feat/implement-sdk/src/background/background.ts#L372-L390)</small>
+<small>[Source: yivi-popup.ts#L90-L136](https://github.com/encryption4all/postguard-tb-addon/blob/57234eebd32d64bd011086fe89ecdd7ac40fc15d/src/pages/yivi-popup/yivi-popup.ts#L90-L136)</small>
 
 ### Parameters
 
