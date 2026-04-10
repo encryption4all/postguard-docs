@@ -33,24 +33,13 @@ const sealed = pg.encrypt({
 
 Under the hood, `pg.recipient.email()` creates a policy with the attribute type `pbdf.sidn-pbdf.email.email`, while `pg.recipient.emailDomain()` extracts the domain from the email and uses `pbdf.sidn-pbdf.email.domain`.
 
-The Thunderbird addon builds recipients with custom policies when the user has configured extra attribute requirements:
+Both methods return a `RecipientBuilder` that supports fluent chaining with `.extraAttribute()` to require additional attributes beyond the base email or domain:
 
 ```ts
-const pgRecipients = recipients.map((r: string) => {
-  const id = toEmail(r);
-  if (customPolicies && customPolicies[id]) {
-    return pg!.recipient.withPolicy(
-      id,
-      customPolicies[id].map(({ t, v }) =>
-        t === EMAIL_ATTRIBUTE_TYPE ? { t, v: v.toLowerCase() } : { t, v }
-      )
-    );
-  }
-  return pg!.recipient.email(id);
-});
+pg.recipient.email('alice@example.com')
+  .extraAttribute('pbdf.gemeente.personalData.surname', 'Smith')
+  .extraAttribute('pbdf.sidn-pbdf.mobilenumber.mobilenumber', '0612345678')
 ```
-
-<small>[Source: background.ts#L348-L359](https://github.com/encryption4all/postguard-tb-addon/blob/26b8433efc8997bc1fe614f532caf17fb94b4a70/src/background/background.ts#L348-L359)</small>
 
 ## Encrypt and upload
 

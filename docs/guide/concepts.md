@@ -155,24 +155,13 @@ const sealed = pg.encrypt({
 
 <small>[Source: encryption.ts#L26-L35](https://github.com/encryption4all/postguard-examples/blob/d6c7f01d3cb63d84e94b1e59079b0d80d748d23b/pg-sveltekit/src/lib/postguard/encryption.ts#L26-L35)</small>
 
-The Thunderbird addon uses `pg.recipient.withPolicy()` for custom per-recipient policies:
+You can require extra attributes beyond email using `.extraAttribute()`:
 
 ```ts
-const pgRecipients = recipients.map((r: string) => {
-  const id = toEmail(r);
-  if (customPolicies && customPolicies[id]) {
-    return pg!.recipient.withPolicy(
-      id,
-      customPolicies[id].map(({ t, v }) =>
-        t === EMAIL_ATTRIBUTE_TYPE ? { t, v: v.toLowerCase() } : { t, v }
-      )
-    );
-  }
-  return pg!.recipient.email(id);
-});
+pg.recipient.email('alice@example.com')
+  .extraAttribute('pbdf.gemeente.personalData.surname', 'Smith')
+  .extraAttribute('pbdf.sidn-pbdf.mobilenumber.mobilenumber', '0612345678')
 ```
-
-<small>[Source: background.ts#L348-L359](https://github.com/encryption4all/postguard-tb-addon/blob/26b8433efc8997bc1fe614f532caf17fb94b4a70/src/background/background.ts#L348-L359)</small>
 
 ::: info Attribute identifiers
 Attribute identifiers like `pbdf.sidn-pbdf.email.email` follow the Yivi attribute scheme. `pbdf` is the scheme, `sidn-pbdf` is the issuer, `email` is the credential, and the final `email` is the specific attribute within that credential.

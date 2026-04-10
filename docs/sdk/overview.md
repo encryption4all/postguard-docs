@@ -89,9 +89,15 @@ See [Authentication Methods](/sdk/auth-methods) for details.
 
 | Method | Returns | Use case |
 |--------|---------|----------|
-| `pg.recipient.email(email)` | `EmailRecipient` | Encrypt for a specific email |
-| `pg.recipient.emailDomain(email)` | `EmailDomainRecipient` | Encrypt for anyone at a domain |
-| `pg.recipient.withPolicy(email, policy)` | `CustomPolicyRecipient` | Encrypt with custom attribute requirements |
+| `pg.recipient.email(email)` | `RecipientBuilder` | Encrypt for a specific email |
+| `pg.recipient.emailDomain(email)` | `RecipientBuilder` | Encrypt for anyone at a domain |
+
+Both return a `RecipientBuilder` that supports fluent chaining with `.extraAttribute(type, value)` to require additional attributes:
+
+```ts
+pg.recipient.email('alice@example.com')
+  .extraAttribute('pbdf.gemeente.personalData.surname', 'Smith')
+```
 
 See [Encryption](/sdk/encryption) for recipient examples.
 

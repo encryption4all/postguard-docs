@@ -136,13 +136,13 @@ async function handleEncrypt(pg: PostGuard, data: EncryptPopupData, windowId: nu
   const mimeData = fromBase64(data.mimeDataBase64);
 
   const recipients = data.recipients.map((r) => {
-    if (r.type === "customPolicy" && r.policy) {
-      return pg.recipient.withPolicy(r.email, r.policy);
+    const base = r.type === "emailDomain"
+      ? pg.recipient.emailDomain(r.email)
+      : pg.recipient.email(r.email);
+    for (const attr of r.extraAttributes ?? []) {
+      base.extraAttribute(attr.t, attr.v);
     }
-    if (r.type === "emailDomain") {
-      return pg.recipient.emailDomain(r.email);
-    }
-    return pg.recipient.email(r.email);
+    return base;
   });
 
   const sealed = pg.encrypt({
