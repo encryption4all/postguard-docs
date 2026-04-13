@@ -34,7 +34,6 @@ jobs:
       - name: Install Coder CLI
         run: |
           curl -L https://coder.com/install.sh | sh
-          sudo mv ./coder /usr/local/bin/coder
 
       - name: Configure Coder
         run: |
