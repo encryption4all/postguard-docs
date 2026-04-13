@@ -27,6 +27,14 @@ jobs:
       ))
 
     steps:
+      - name: Generate GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.DOBBY_APP_ID }}
+          private-key: ${{ secrets.DOBBY_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+
       - name: Compute issue URL
         id: issue-url
         run: |
@@ -57,5 +65,5 @@ jobs:
             - Link back to the original issue
           coder-username: "r-hensen"
           github-issue-url: ${{ steps.issue-url.outputs.url }}
-          github-token: ${{ github.token }}
+          github-token: ${{ steps.app-token.outputs.token }}
           comment-on-issue: true
