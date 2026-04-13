@@ -1,9 +1,6 @@
 name: Dobby AI Agent
 
 on:
-  # Trigger on issue label
-  issues:
-    types: [labeled]
   # Trigger on issue/PR comments
   issue_comment:
     types: [created]
@@ -18,9 +15,8 @@ permissions:
 jobs:
   dobby:
     runs-on: ubuntu-latest
-    # Trigger on "dobby" label OR "@dobby"/"/dobby" in a comment
+    # Trigger on "@dobby" or "/dobby" in a comment
     if: |
-      (github.event_name == 'issues' && github.event.label.name == 'dobby') ||
       (github.event_name == 'issue_comment' && (
         contains(github.event.comment.body, '@dobby') ||
         contains(github.event.comment.body, '/dobby')
@@ -39,25 +35,13 @@ jobs:
         run: |
           coder login ${{ secrets.CODER_URL }} --token ${{ secrets.CODER_TOKEN }}
 
-      - name: Create Coder Task
+      - name: Create Coder Workspace
         run: |
           ISSUE_NUMBER="${{ github.event.issue.number || github.event.pull_request.number }}"
 
-          coder exp task create \
+          coder create dobby-issue-${ISSUE_NUMBER} \
             --template dobby \
-            --name "dobby-issue-${ISSUE_NUMBER}" \
-            --prompt "You are Dobby, an AI coding agent. You have been triggered from GitHub.
-
-          Use the gh CLI to read the full issue/PR context:
-          gh issue view ${ISSUE_NUMBER} --repo ${{ github.repository }} --comments
-
-          Your task:
-          - Read the issue/PR and all comments carefully
-          - Clone the repository and understand the codebase
-          - Implement the requested changes or review
-          - Run tests to verify your changes work
-          - Create a DRAFT pull request with a clear description
-          - Link back to the original issue #${ISSUE_NUMBER}"
+            --yes
 
       - name: Comment on Issue
         run: |
