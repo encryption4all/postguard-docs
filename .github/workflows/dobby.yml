@@ -8,10 +8,6 @@ on:
   pull_request_review_comment:
     types: [created]
 
-permissions:
-  issues: write
-  pull-requests: write
-
 jobs:
   dobby:
     runs-on: ubuntu-latest
@@ -27,25 +23,14 @@ jobs:
       ))
 
     steps:
-      - name: Generate GitHub App token
-        id: app-token
-        uses: actions/create-github-app-token@v1
-        with:
-          app-id: ${{ secrets.DOBBY_APP_ID }}
-          private-key: ${{ secrets.DOBBY_APP_PRIVATE_KEY }}
-          owner: ${{ github.repository_owner }}
-
       - name: Compute issue URL
         id: issue-url
         run: |
-          # The create-task-action rejects /pull/ URLs, but GitHub uses
-          # /pull/ and /issues/ interchangeably. Convert to /issues/ format.
           RAW_URL="${{ github.event.issue.html_url || github.event.pull_request.html_url }}"
           echo "url=${RAW_URL/\/pull\//\/issues\/}" >> "$GITHUB_OUTPUT"
 
       - name: Cleanup existing workspace
         run: |
-          # Delete any existing workspace with the same name to avoid conflicts
           TASK_NAME="gh-${{ github.event.issue.number || github.event.pull_request.number }}"
           curl -sf -X DELETE \
             -H "Coder-Session-Token: ${{ secrets.CODER_TOKEN }}" \
@@ -72,7 +57,6 @@ jobs:
             - Run tests to verify your changes work
             - Create a DRAFT pull request with a clear description
             - Link back to the original issue
+            - Comment on the issue/PR with a summary of what you did
           coder-username: "r-hensen"
           github-issue-url: ${{ steps.issue-url.outputs.url }}
-          github-token: ${{ steps.app-token.outputs.token }}
-          comment-on-issue: true
