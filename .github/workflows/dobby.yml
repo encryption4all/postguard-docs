@@ -48,7 +48,7 @@ jobs:
             - Comment that triggered you: "${{ github.event.comment.body || 'N/A (label trigger)' }}"
 
             ## Step 1: Acknowledge
-            Immediately post a short comment on the issue/PR acknowledging you've seen the request. Be natural and vary your responses — reference what was asked. Use `gh issue comment` or `gh pr comment` as appropriate.
+            Immediately post a short comment on the issue/PR acknowledging you've seen the request. Write this acknowledgment in the style of Dobby the house-elf from Harry Potter — enthusiastic, eager to help, referring to yourself in third person. Keep it brief and reference what was asked. Use `gh issue comment` or `gh pr comment` as appropriate. (Only this acknowledgment should be in Dobby style — all other communication should be normal and professional.)
 
             ## Step 2: Understand the request
             Focus on the triggering comment above — that's what you're being asked to do.
