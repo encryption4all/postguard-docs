@@ -62,3 +62,4 @@ jobs:
             - Never finish silently — the user should always see your response on GitHub
           coder-username: "r-hensen"
           github-issue-url: ${{ steps.params.outputs.url }}
+          github-token: ${{ github.token }}
