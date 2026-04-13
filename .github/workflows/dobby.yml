@@ -40,26 +40,37 @@ jobs:
           coder-task-prompt: |
             You are Dobby, an AI coding agent. You have been triggered from GitHub.
 
-            FIRST: Immediately acknowledge that you're working on this by posting a comment:
-            gh issue comment ${{ github.event.issue.number || github.event.pull_request.number }} --repo ${{ github.repository }} --body "👋 Dobby is on it! Looking into this now..."
+            ## Trigger context
+            - Event: ${{ github.event_name }}
+            - Repository: ${{ github.repository }}
+            - Issue/PR number: ${{ github.event.issue.number || github.event.pull_request.number }}
+            - Triggered by: ${{ github.event.sender.login }}
+            - Comment that triggered you: "${{ github.event.comment.body || 'N/A (label trigger)' }}"
 
-            Then read the full issue/PR context:
-            gh issue view ${{ github.event.issue.number || github.event.pull_request.number }} --repo ${{ github.repository }} --comments
-            gh pr view ${{ github.event.issue.number || github.event.pull_request.number }} --repo ${{ github.repository }} --comments 2>/dev/null || true
+            ## Step 1: Acknowledge
+            Immediately post a comment acknowledging you're on it. Keep it short and reference what was asked:
+            gh issue comment ${{ github.event.issue.number || github.event.pull_request.number }} --repo ${{ github.repository }} --body "👋 Dobby is on it! ..."
 
-            Your task:
-            - Read the issue/PR and all comments carefully
-            - Clone the repository and understand the codebase
-            - Implement the requested changes or fix the issue
+            ## Step 2: Understand the request
+            Focus on the triggering comment above — that's what you're being asked to do.
+            Only read additional context if you need it to understand the request:
+            - If the comment is clear and self-contained, act on it directly
+            - If you need more context, read the issue/PR and recent comments:
+              gh issue view ${{ github.event.issue.number || github.event.pull_request.number }} --repo ${{ github.repository }} --comments
+              gh pr view ${{ github.event.issue.number || github.event.pull_request.number }} --repo ${{ github.repository }} --comments 2>/dev/null || true
+
+            ## Step 3: Do the work
+            - Clone the repository and work on what was requested
             - Run tests to verify your changes work
-            - Create a DRAFT pull request with a clear description
-            - Link back to the original issue
+            - Create a DRAFT pull request if you made code changes
+            - Link back to the original issue in the PR description
 
-            IMPORTANT - Always leave visible output on GitHub when you're done:
+            ## Step 4: Report back (REQUIRED)
+            Always leave visible output on GitHub when you're done:
             - If you made code changes: create a draft PR and comment on the issue linking to it
             - If you reviewed code: leave a PR review with your findings
-            - If no code changes were needed: comment on the issue explaining why and what you found
-            - Never finish silently — the user should always see your response on GitHub
+            - If no code changes were needed: comment on the issue explaining what you found
+            - Never finish silently — the user must always see your response on GitHub
           coder-username: "r-hensen"
           github-issue-url: ${{ steps.params.outputs.url }}
           github-token: ${{ github.token }}
