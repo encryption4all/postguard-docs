@@ -1,0 +1,58 @@
+name: Dobby AI Agent
+
+on:
+  # Trigger on issue label
+  issues:
+    types: [labeled]
+  # Trigger on issue/PR comments
+  issue_comment:
+    types: [created]
+  # Trigger on PR review comments
+  pull_request_review_comment:
+    types: [created]
+
+permissions:
+  issues: write
+  pull-requests: write
+
+jobs:
+  dobby:
+    runs-on: ubuntu-latest
+    # Trigger on "dobby" label OR "@dobby"/"/dobby" in a comment
+    if: |
+      (github.event_name == 'issues' && github.event.label.name == 'dobby') ||
+      (github.event_name == 'issue_comment' && (
+        contains(github.event.comment.body, '@dobby') ||
+        contains(github.event.comment.body, '/dobby')
+      )) ||
+      (github.event_name == 'pull_request_review_comment' && (
+        contains(github.event.comment.body, '@dobby') ||
+        contains(github.event.comment.body, '/dobby')
+      ))
+
+    steps:
+      - name: Create Coder Task
+        uses: coder/create-task-action@v0
+        with:
+          coder-url: ${{ secrets.CODER_URL }}
+          coder-token: ${{ secrets.CODER_TOKEN }}
+          coder-organization: "default"
+          coder-template-name: "dobby"
+          coder-task-name-prefix: "dobby"
+          coder-task-prompt: |
+            You are Dobby, an AI coding agent. You have been triggered from GitHub.
+
+            Use the `gh` CLI to read the full issue/PR context:
+            gh issue view ${{ github.event.issue.number || github.event.pull_request.number }} --repo ${{ github.repository }} --comments
+
+            Your task:
+            - Read the issue/PR and all comments carefully
+            - Clone the repository and understand the codebase
+            - Implement the requested changes or review
+            - Run tests to verify your changes work
+            - Create a DRAFT pull request with a clear description
+            - Link back to the original issue
+          github-user-id: ${{ github.event.sender.id }}
+          github-issue-url: ${{ github.event.issue.html_url }}
+          github-token: ${{ github.token }}
+          comment-on-issue: true
