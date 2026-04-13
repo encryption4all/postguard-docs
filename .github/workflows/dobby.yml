@@ -1,22 +1,21 @@
 name: Dobby AI Agent
 
 on:
-  # Trigger on issue/PR comments
+  issues:
+    types: [labeled]
   issue_comment:
     types: [created]
-  # Trigger on PR review comments
   pull_request_review_comment:
     types: [created]
 
 permissions:
   issues: write
-  pull-requests: write
 
 jobs:
   dobby:
     runs-on: ubuntu-latest
-    # Trigger on "@dobby" or "/dobby" in a comment
     if: |
+      (github.event_name == 'issues' && github.event.label.name == 'dobby') ||
       (github.event_name == 'issue_comment' && (
         contains(github.event.comment.body, '@dobby') ||
         contains(github.event.comment.body, '/dobby')
@@ -28,13 +27,11 @@ jobs:
 
     steps:
       - name: Create Coder Task
-        uses: coder/create-task-action@v0.0.5
+        uses: coder/create-task-action@v0
         with:
           coder-url: ${{ secrets.CODER_URL }}
           coder-token: ${{ secrets.CODER_TOKEN }}
-          coder-organization: "default"
-          coder-template-name: "dobby"
-          coder-task-name-prefix: "dobby"
+          coder-template-name: "tasks-docker"
           coder-task-prompt: |
             You are Dobby, an AI coding agent. You have been triggered from GitHub.
 
@@ -49,6 +46,6 @@ jobs:
             - Create a DRAFT pull request with a clear description
             - Link back to the original issue
           github-user-id: ${{ github.event.sender.id }}
-          github-issue-url: ${{ github.event.issue.html_url || github.event.pull_request.html_url }}
+          github-issue-url: ${{ github.event.issue.html_url }}
           github-token: ${{ github.token }}
           comment-on-issue: true
