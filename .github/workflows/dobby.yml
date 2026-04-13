@@ -31,28 +31,39 @@ jobs:
       ))
 
     steps:
+      - name: Install Coder CLI
+        run: |
+          curl -L https://coder.com/install.sh | sh
+          sudo mv ./coder /usr/local/bin/coder
+
+      - name: Configure Coder
+        run: |
+          coder login ${{ secrets.CODER_URL }} --token ${{ secrets.CODER_TOKEN }}
+
       - name: Create Coder Task
-        uses: coder/create-task-action@v0
-        with:
-          coder-url: ${{ secrets.CODER_URL }}
-          coder-token: ${{ secrets.CODER_TOKEN }}
-          coder-organization: "default"
-          coder-template-name: "dobby"
-          coder-task-name-prefix: "dobby"
-          coder-task-prompt: |
-            You are Dobby, an AI coding agent. You have been triggered from GitHub.
+        run: |
+          ISSUE_NUMBER="${{ github.event.issue.number || github.event.pull_request.number }}"
 
-            Use the `gh` CLI to read the full issue/PR context:
-            gh issue view ${{ github.event.issue.number || github.event.pull_request.number }} --repo ${{ github.repository }} --comments
+          coder exp task create \
+            --template dobby \
+            --name "dobby-issue-${ISSUE_NUMBER}" \
+            --prompt "You are Dobby, an AI coding agent. You have been triggered from GitHub.
 
-            Your task:
-            - Read the issue/PR and all comments carefully
-            - Clone the repository and understand the codebase
-            - Implement the requested changes or review
-            - Run tests to verify your changes work
-            - Create a DRAFT pull request with a clear description
-            - Link back to the original issue
-          github-user-id: ${{ github.event.sender.id }}
-          github-issue-url: ${{ github.event.issue.html_url }}
-          github-token: ${{ github.token }}
-          comment-on-issue: true
+          Use the gh CLI to read the full issue/PR context:
+          gh issue view ${ISSUE_NUMBER} --repo ${{ github.repository }} --comments
+
+          Your task:
+          - Read the issue/PR and all comments carefully
+          - Clone the repository and understand the codebase
+          - Implement the requested changes or review
+          - Run tests to verify your changes work
+          - Create a DRAFT pull request with a clear description
+          - Link back to the original issue #${ISSUE_NUMBER}"
+
+      - name: Comment on Issue
+        run: |
+          ISSUE_NUMBER="${{ github.event.issue.number || github.event.pull_request.number }}"
+          gh issue comment ${ISSUE_NUMBER} --repo ${{ github.repository }} \
+            --body "🤖 Dobby is working on this! I'll create a draft PR when ready."
+        env:
+          GH_TOKEN: ${{ github.token }}
