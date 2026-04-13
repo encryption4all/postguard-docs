@@ -48,8 +48,7 @@ jobs:
             - Comment that triggered you: "${{ github.event.comment.body || 'N/A (label trigger)' }}"
 
             ## Step 1: Acknowledge
-            Immediately post a comment acknowledging you're on it. Keep it short and reference what was asked:
-            gh issue comment ${{ github.event.issue.number || github.event.pull_request.number }} --repo ${{ github.repository }} --body "👋 Dobby is on it! ..."
+            Immediately post a short comment on the issue/PR acknowledging you've seen the request. Be natural and vary your responses — reference what was asked. Use `gh issue comment` or `gh pr comment` as appropriate.
 
             ## Step 2: Understand the request
             Focus on the triggering comment above — that's what you're being asked to do.
