@@ -23,19 +23,12 @@ jobs:
       ))
 
     steps:
-      - name: Compute issue URL
-        id: issue-url
+      - name: Compute issue URL and task prefix
+        id: params
         run: |
           RAW_URL="${{ github.event.issue.html_url || github.event.pull_request.html_url }}"
           echo "url=${RAW_URL/\/pull\//\/issues\/}" >> "$GITHUB_OUTPUT"
-
-      - name: Cleanup existing workspace
-        run: |
-          TASK_NAME="gh-${{ github.event.issue.number || github.event.pull_request.number }}"
-          curl -sf -X DELETE \
-            -H "Coder-Session-Token: ${{ secrets.CODER_TOKEN }}" \
-            "${{ secrets.CODER_URL }}/api/v2/workspaces/r-hensen/${TASK_NAME}" \
-            --max-time 10 2>/dev/null || true
+          echo "prefix=gh-$(date +%s | tail -c 5)" >> "$GITHUB_OUTPUT"
 
       - name: Create Coder Task
         uses: coder/create-task-action@v0.0.5
@@ -43,6 +36,7 @@ jobs:
           coder-url: ${{ secrets.CODER_URL }}
           coder-token: ${{ secrets.CODER_TOKEN }}
           coder-template-name: "tasks-docker"
+          coder-task-name-prefix: ${{ steps.params.outputs.prefix }}
           coder-task-prompt: |
             You are Dobby, an AI coding agent. You have been triggered from GitHub.
 
@@ -67,4 +61,4 @@ jobs:
             - If no code changes were needed: comment on the issue explaining why and what you found
             - Never finish silently — the user should always see your response on GitHub
           coder-username: "r-hensen"
-          github-issue-url: ${{ steps.issue-url.outputs.url }}
+          github-issue-url: ${{ steps.params.outputs.url }}
