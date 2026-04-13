@@ -43,6 +43,15 @@ jobs:
           RAW_URL="${{ github.event.issue.html_url || github.event.pull_request.html_url }}"
           echo "url=${RAW_URL/\/pull\//\/issues\/}" >> "$GITHUB_OUTPUT"
 
+      - name: Cleanup existing workspace
+        run: |
+          # Delete any existing workspace with the same name to avoid conflicts
+          TASK_NAME="gh-${{ github.event.issue.number || github.event.pull_request.number }}"
+          curl -sf -X DELETE \
+            -H "Coder-Session-Token: ${{ secrets.CODER_TOKEN }}" \
+            "${{ secrets.CODER_URL }}/api/v2/workspaces/r-hensen/${TASK_NAME}" \
+            --max-time 10 2>/dev/null || true
+
       - name: Create Coder Task
         uses: coder/create-task-action@v0.0.5
         with:
