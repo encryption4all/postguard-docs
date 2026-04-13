@@ -45,7 +45,7 @@ jobs:
             - Run tests to verify your changes work
             - Create a DRAFT pull request with a clear description
             - Link back to the original issue
-          github-user-id: ${{ github.event.sender.id }}
+          coder-username: "r-hensen"
           github-issue-url: ${{ github.event.issue.html_url }}
           github-token: ${{ github.token }}
           comment-on-issue: true
