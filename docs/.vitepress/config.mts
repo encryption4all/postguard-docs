@@ -10,6 +10,7 @@ export default defineConfig({
       { text: 'Guide', link: '/guide/what-is-postguard' },
       { text: 'SDK', link: '/sdk/overview' },
       { text: 'Integrations', link: '/integrations/web-app' },
+      { text: 'Repositories', link: '/repos/overview' },
     ],
     sidebar: [
       {
@@ -38,6 +39,59 @@ export default defineConfig({
         items: [
           { text: 'Web Application', link: '/integrations/web-app' },
           { text: 'Email Addon', link: '/integrations/email-addon' },
+        ],
+      },
+      {
+        text: 'Repositories',
+        items: [
+          { text: 'Overview', link: '/repos/overview' },
+          {
+            text: 'Cryptographic Libraries',
+            collapsed: false,
+            items: [
+              { text: 'pg-curve', link: '/repos/pg-curve' },
+              { text: 'ibe', link: '/repos/ibe' },
+              { text: 'ibs', link: '/repos/ibs' },
+            ],
+          },
+          {
+            text: 'Core',
+            collapsed: false,
+            items: [
+              { text: 'postguard', link: '/repos/postguard' },
+            ],
+          },
+          {
+            text: 'SDKs',
+            collapsed: false,
+            items: [
+              { text: 'postguard-js', link: '/repos/postguard-js' },
+              { text: 'postguard-dotnet', link: '/repos/postguard-dotnet' },
+              { text: 'irmaseal-mail-utils', link: '/repos/irmaseal-mail-utils' },
+              { text: 'pg-components', link: '/repos/pg-components' },
+            ],
+          },
+          {
+            text: 'Applications',
+            collapsed: false,
+            items: [
+              { text: 'postguard-website', link: '/repos/postguard-website' },
+              { text: 'postguard-tb-addon', link: '/repos/postguard-tb-addon' },
+              { text: 'postguard-outlook-addon', link: '/repos/postguard-outlook-addon' },
+              { text: 'cryptify', link: '/repos/cryptify' },
+              { text: 'postguard-fallback', link: '/repos/postguard-fallback' },
+            ],
+          },
+          {
+            text: 'Examples & Docs',
+            collapsed: false,
+            items: [
+              { text: 'postguard-examples', link: '/repos/postguard-examples' },
+              { text: 'pg-example', link: '/repos/pg-example' },
+              { text: 'pdf-signature', link: '/repos/pdf-signature' },
+              { text: 'postguard-docs', link: '/repos/postguard-docs' },
+            ],
+          },
         ],
       },
     ],
