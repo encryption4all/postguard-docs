@@ -13,6 +13,8 @@ Both the backend and frontend are written in Rust:
 
 Supporting services: NGINX (reverse proxy), PostgreSQL (database), Mailhog (email testing).
 
+For background on the IRMA/Yivi protocol, see the [IRMA documentation](https://irma.app/docs/what-is-irma/). The PostGuard encryption protocol is described in the [irmaseal design document](https://github.com/Wassasin/irmaseal/blob/master/docs/design.md).
+
 ## Development
 
 ### Docker (recommended)
@@ -29,6 +31,17 @@ docker-compose up
 ```
 
 The application is available at `http://tguard.localhost`.
+
+### Dependencies
+
+The Docker setup includes all required software. For manual development, the following versions are used:
+
+| Dependency | Version |
+|---|---|
+| Rust | 1.57+ |
+| NGINX | 1.21 |
+| PostgreSQL | 12 |
+| Mailhog | 1.0 |
 
 ### Manual Setup
 

@@ -30,6 +30,19 @@ docker-compose -f docker-compose.prod.yml up
 # Access at http://localhost
 ```
 
+### Stopping Services
+
+```bash
+docker-compose down                          # development
+docker-compose -f docker-compose.prod.yml down  # production
+```
+
+### Building with Docker
+
+```bash
+docker-compose build
+```
+
 ### Manual (without Docker)
 
 ```bash

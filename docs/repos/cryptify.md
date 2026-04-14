@@ -42,17 +42,38 @@ When developing locally, change the `baseurl` constant in `FileProvider.ts` to `
 
 #### Backend
 
-Requires Rust:
+Requires Rust.
+
+##### Configuration
+
+The backend needs a configuration file. See `conf/` for examples (`config.toml` for production, `config.dev.toml` for development).
+
+| Option | Description |
+|---|---|
+| `server_url` | Public URL of the service |
+| `address` | Bind address (e.g. `0.0.0.0`) |
+| `data_dir` | Directory for file storage |
+| `email_from` | Sender address for email notifications |
+| `smtp_url` | SMTP server hostname |
+| `smtp_port` | SMTP server port |
+| `smtp_tls` | Enable TLS for SMTP (default: `false`) |
+| `smtp_username` | SMTP username (optional) |
+| `smtp_password` | SMTP password (optional) |
+| `allowed_origins` | CORS allowed origins (regex) |
+| `pkg_url` | PostGuard PKG server URL |
+
+##### Building and running
 
 ```bash
 # Development (with auto-reload)
-env ROCKET_ENV=development ROCKET_CONFIG=conf/Rocket.toml cargo watch -x run
+env ROCKET_ENV=development ROCKET_CONFIG=conf/config.dev.toml cargo watch -x run
 
 # Production build
 env ROCKET_ENV=production cargo build --release
-```
 
-The backend needs a `ROCKET_CONFIG` environment variable pointing to the configuration file. See the example in `conf/`.
+# Run the built binary
+env ROCKET_CONFIG=conf/config.toml ./target/release/cryptify-backend
+```
 
 ### Electron Packaging
 
