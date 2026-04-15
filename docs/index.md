@@ -16,7 +16,7 @@ hero:
       text: Getting Started
       link: /sdk/getting-started
     - theme: alt
-      text: Visit postguard.eu
+      text: Visit PostGuard
       link: https://postguard.eu
 
 features:
