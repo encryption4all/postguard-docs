@@ -10,6 +10,7 @@ export default defineConfig({
       { text: 'Guide', link: '/guide/what-is-postguard' },
       { text: 'SDK', link: '/sdk/overview' },
       { text: 'Repositories', link: '/repos/overview' },
+      { text: 'PostGuard', link: 'https://postguard.eu' },
     ],
     sidebar: [
       {
