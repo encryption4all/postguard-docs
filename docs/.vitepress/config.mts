@@ -78,7 +78,6 @@ export default defineConfig({
             items: [
               { text: 'postguard-js', link: '/repos/postguard-js' },
               { text: 'postguard-dotnet', link: '/repos/postguard-dotnet' },
-              { text: 'irmaseal-mail-utils', link: '/repos/irmaseal-mail-utils' },
               { text: 'pg-components', link: '/repos/pg-components' },
             ],
           },
