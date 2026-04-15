@@ -15,6 +15,9 @@ hero:
     - theme: alt
       text: Getting Started
       link: /sdk/getting-started
+    - theme: alt
+      text: Visit postguard.eu
+      link: https://postguard.eu
 
 features:
   - title: No key exchange needed
