@@ -123,4 +123,4 @@ All encryption methods can throw:
 - `NetworkError`: PKG or Cryptify communication failure (includes `status` and `body` properties)
 - `YiviNotInstalledError`: Yivi packages not installed (when using `pg.sign.yivi`)
 
-See [Error Handling](/sdk/errors) for the full error reference.
+See [Error Handling](/sdk/js-errors) for the full error reference.

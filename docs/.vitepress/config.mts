@@ -19,7 +19,6 @@ export default defineConfig({
           { text: 'Usage Flows', link: '/guide/usage-flows' },
           { text: 'Core Concepts', link: '/guide/concepts' },
           { text: 'Architecture', link: '/guide/architecture' },
-          { text: 'Getting Started', link: '/guide/getting-started' },
           { text: 'Protocol Specification', link: '/guide/protocol' },
         ],
       },
@@ -27,11 +26,26 @@ export default defineConfig({
         text: 'SDK Reference',
         items: [
           { text: 'Overview', link: '/sdk/overview' },
-          { text: 'Encryption', link: '/sdk/encryption' },
-          { text: 'Decryption', link: '/sdk/decryption' },
-          { text: 'Email Helpers', link: '/sdk/email-helpers' },
-          { text: 'Authentication Methods', link: '/sdk/auth-methods' },
-          { text: 'Error Handling', link: '/sdk/errors' },
+          { text: 'Getting Started', link: '/sdk/getting-started' },
+          {
+            text: 'JavaScript SDK',
+            collapsed: false,
+            items: [
+              { text: 'Encryption', link: '/sdk/js-encryption' },
+              { text: 'Decryption', link: '/sdk/js-decryption' },
+              { text: 'Email Helpers', link: '/sdk/js-email-helpers' },
+              { text: 'Authentication Methods', link: '/sdk/js-auth-methods' },
+              { text: 'Error Handling', link: '/sdk/js-errors' },
+            ],
+          },
+          {
+            text: '.NET SDK',
+            collapsed: false,
+            items: [
+              { text: 'Encryption', link: '/sdk/dotnet-encryption' },
+              { text: 'Error Handling', link: '/sdk/dotnet-errors' },
+            ],
+          },
         ],
       },
       {

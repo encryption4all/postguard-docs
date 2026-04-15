@@ -189,4 +189,4 @@ See the [Thunderbird addon](/repos/postguard-tb-addon) and [Outlook addon](/repo
 
 Decryption also requires identity verification. The same `element` and `session` patterns apply. You must provide either `element` or `session` when calling `opened.decrypt()`. If neither is provided, the SDK throws a `DecryptionError`.
 
-Pass `enableCache: true` to cache the Yivi JWT across multiple `decrypt()` calls. This avoids forcing the user to scan a QR code for every message when decrypting a batch. See [Decryption: JWT caching](/sdk/decryption#jwt-caching) for details.
+Pass `enableCache: true` to cache the Yivi JWT across multiple `decrypt()` calls. This avoids forcing the user to scan a QR code for every message when decrypting a batch. See [Decryption: JWT caching](/sdk/js-decryption#jwt-caching) for details.

@@ -14,7 +14,7 @@ hero:
       link: /guide/concepts
     - theme: alt
       text: Getting Started
-      link: /guide/getting-started
+      link: /sdk/getting-started
 
 features:
   - title: No key exchange needed
@@ -56,4 +56,4 @@ await sealed.upload({ notify: { message: 'Here are your files' } });
 
 <small>[Source: encryption.ts#L22-L46](https://github.com/encryption4all/postguard-examples/blob/d6c7f01d3cb63d84e94b1e59079b0d80d748d23b/pg-sveltekit/src/lib/postguard/encryption.ts#L22-L46)</small>
 
-Read the [concepts guide](/guide/concepts) to understand how this works, or jump straight to [getting started](/guide/getting-started).
+Read the [concepts guide](/guide/concepts) to understand how this works, or jump straight to [getting started](/sdk/getting-started).
