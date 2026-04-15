@@ -8,7 +8,7 @@ The PostGuard web frontend for encrypting and sending files. Users pick files, c
 
 ### Quick Start with Docker Compose (recommended)
 
-Docker Compose sets up everything: the PostGuard website, Cryptify backend, IRMA server, PKG server, and a mail testing UI.
+Docker Compose sets up everything: the PostGuard website, Cryptify file share server, IRMA server, PKG server, and a Mailcrab mail testing UI.
 
 ```bash
 # Initialize submodules (Cryptify, etc.)
@@ -28,6 +28,25 @@ Your code changes reload automatically since the source is mounted as a volume.
 ```bash
 docker-compose -f docker-compose.prod.yml up
 # Access at http://localhost
+```
+
+### Stopping Services
+
+```bash
+# Development
+docker-compose down
+
+# Production
+docker-compose -f docker-compose.prod.yml down
+```
+
+### Building
+
+Building is done automatically through GitHub Actions. You can also build manually:
+
+```bash
+docker-compose build      # Build via Docker
+npm run build             # Build only the PostGuard website
 ```
 
 ### Manual (without Docker)
@@ -50,10 +69,10 @@ npm run test      # Playwright tests
 
 ### Mobile Debugging
 
-To test on a physical Android device over USB (Yivi must be in [developer mode](https://docs.yivi.app/yivi-app/#developer-mode)):
+To test on a physical Android device, connect the phone with USB debugging enabled and make sure Yivi is in [developer mode](https://docs.yivi.app/yivi-app/#developer-mode):
 
 ```bash
-adb reverse tcp:8088 tcp:8088   # Yivi / IRMA server
+adb reverse tcp:8088 tcp:8088   # Yivi / IRMA server (for scanning QR codes)
 adb reverse tcp:8080 tcp:8080   # PostGuard website
 ```
 

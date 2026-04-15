@@ -2,7 +2,7 @@
 
 [GitHub](https://github.com/encryption4all/postguard-fallback) · Rust · Web Decryption Service
 
-Also known as **TGuard**. A self-contained web service for sending and decrypting PostGuard-encrypted messages, designed as a fallback for users who don't have a PostGuard client installed. Users can decrypt messages directly in their browser after proving their identity via [Yivi](https://yivi.app) (formerly IRMA).
+Also known as **TGuard**. A self-contained web service for sending and decrypting [irmaseal](https://github.com/encryption4all/irmaseal)-encrypted messages. Users encrypt messages client-side, and recipients can decrypt them in their browser after proving they own the required attributes (e.g., email address, name, or identifying number) via [Yivi](https://yivi.app) (formerly [IRMA](https://irma.app/docs/what-is-irma/)).
 
 ## Architecture
 
@@ -13,22 +13,25 @@ Both the backend and frontend are written in Rust:
 
 Supporting services: NGINX (reverse proxy), PostgreSQL (database), Mailhog (email testing).
 
+The frontend is compiled and bundled using [Trunk](https://trunkrs.dev/) and uses the [Yew](https://yew.rs/) framework. Additional Rust library dependencies can be found in `Cargo.toml` in both the frontend and backend directories.
+
+For a technical overview of IRMA Seal, see the [design document](https://github.com/Wassasin/irmaseal/blob/master/docs/design.md).
+
 ## Development
 
 ### Docker (recommended)
 
 ```bash
-# Development setup
-docker-compose -f docker-compose.dev.yml up
-
-# Production-like setup
-docker-compose up
-
 # Initialize the database
 ./setup.sh
+
+# Development setup
+docker-compose up
 ```
 
 The application is available at `http://tguard.localhost`.
+
+The Docker setup includes the following software versions: Rust 1.57 (rust:bullseye), NGINX 1.21, PostgreSQL 12, and Mailhog 1.0.
 
 ### Manual Setup
 

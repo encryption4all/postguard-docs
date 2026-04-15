@@ -2,6 +2,10 @@
 
 [GitHub](https://github.com/encryption4all/postguard) · Rust · Core library and services
 
+::: warning
+This implementation has not been audited. Use at your own risk.
+:::
+
 The main PostGuard repository. It contains the core encryption library, the Private Key Generator (PKG) server, WebAssembly bindings for browsers, a command-line client, and FFI bindings for native language integration.
 
 The repo also includes a [Docusaurus documentation site](https://encryption4all.github.io/postguard/) in the `website/` directory, covering architecture, API reference, and Yivi integration. That content has been consolidated into this centralized docs site.
@@ -12,7 +16,7 @@ The repository is a Rust workspace with five crates:
 
 | Crate | Description |
 |---|---|
-| `pg-core` | Core library: metadata management, binary serialization, streaming encryption (with a WebCrypto-backed WASM backend under the `web` and `stream` features) |
+| `pg-core` | Core library: metadata management, binary serialization, streaming encryption. Supports a native Rust backend (`rust` feature) and a WebCrypto-backed WASM backend (`web` + `stream` features). |
 | `pg-pkg` | HTTP API server (Actix-web) that runs a Private Key Generator instance |
 | `pg-wasm` | WebAssembly bindings via `wasm-pack`, used by the JavaScript SDK |
 | `pg-cli` | Command-line tool for encrypting and decrypting files |
@@ -42,8 +46,8 @@ For the full protocol details, see the [architecture overview](/guide/architectu
 
 | Primitive | Implementation |
 |---|---|
-| KEM | CGW-KV anonymous IBE on BLS12-381 ([`ibe`](https://crates.io/crates/ibe) crate) |
-| IBS | GG identity-based signatures ([`ibs`](https://crates.io/crates/ibs) crate) |
+| KEM | CGW-KV anonymous IBE on BLS12-381 ([`ibe`](/repos/ibe) crate) |
+| IBS | GG identity-based signatures ([`ibs`](/repos/ibs) crate) |
 | Symmetric | AES-128-GCM (128-bit security to match BLS12-381) |
 | Hashing | SHA3-512 for identity derivation |
 
@@ -60,11 +64,14 @@ Streaming mode is enabled with the `stream` feature flag. When active, encryptio
 
 ### Prerequisites
 
-- [Rust](https://www.rust-lang.org/tools/install) (stable, 1.90.0 or later)
-- Docker and Docker Compose (for the local development environment)
+- [Rust](https://www.rust-lang.org/tools/install) 1.90.0 or later
+- Docker and Docker Compose (for the local development environment with PostgreSQL and Yivi server)
 - [wasm-pack](https://rustwasm.github.io/wasm-pack/) (only for WASM development)
 
 ```bash
+# Install Rust
+curl https://sh.rustup.rs -sSf | sh
+
 # Install wasm-pack (if working on pg-wasm)
 cargo install --git https://github.com/rustwasm/wasm-pack.git
 ```
@@ -108,6 +115,31 @@ wasm-pack test --release --headless --chrome ./pg-wasm
 wasm-pack test --release --headless --firefox ./pg-wasm
 ```
 
+### Development Environment
+
+Docker Compose starts PostgreSQL and a Yivi (IRMA) server for local development:
+
+```bash
+docker-compose up
+```
+
+Then run the PKG server against the local services:
+
+```bash
+cargo run --release --bin pg-pkg server \
+  -d postgres://devuser:devpassword@localhost/devdb \
+  -t <irma_token> \
+  -i http://localhost:8088
+```
+
+### Environment Variables
+
+| Variable | Description | Default |
+|---|---|---|
+| `IRMA_SERVER` | Yivi/IRMA server URL | `https://is.yivi.app` |
+| `DATABASE_URL` | PostgreSQL connection string | — |
+| `RUST_LOG` | Log level (`debug`, `info`, `warn`, `error`) | — |
+
 ### Running the PKG Server
 
 Generate a master key pair first (run once):
@@ -134,31 +166,6 @@ docker run -p 8080:8080 postguard-pkg server \
   -i <irma_url> \
   -d <postgres_url>
 ```
-
-### Local Development Environment
-
-Docker Compose starts PostgreSQL and a Yivi (IRMA) server for local development:
-
-```bash
-docker-compose up
-```
-
-Then run the PKG server against the local services:
-
-```bash
-cargo run --release --bin pg-pkg server \
-  -d postgres://devuser:devpassword@localhost/devdb \
-  -t <irma_token> \
-  -i http://localhost:8088
-```
-
-### Environment Variables
-
-| Variable | Description | Default |
-|---|---|---|
-| `IRMA_SERVER` | Yivi/IRMA server URL | `https://is.yivi.app` |
-| `DATABASE_URL` | PostgreSQL connection string | (required) |
-| `RUST_LOG` | Log level (`debug`, `info`, `warn`, `error`) | (none) |
 
 ### Using the CLI
 
@@ -199,12 +206,40 @@ The PKG server (`pg-pkg`) exposes an HTTP API. By default it listens on `http://
 | `POST` | `/v2/irma/start` | Start a Yivi identity verification session. |
 | `GET` | `/v2/irma/jwt/{token}` | Retrieve the JWT result of a completed Yivi session. |
 
+Start a Yivi session with a request body like:
+
+```json
+{
+  "attr": {
+    "recipient@example.com": {
+      "t": 1234567890,
+      "con": [
+        {"t": "pbdf.sidn-pbdf.email.email", "v": "recipient@example.com"}
+      ]
+    }
+  }
+}
+```
+
 ### Key Issuance
 
 | Method | Endpoint | Description |
 |---|---|---|
 | `GET` | `/v2/irma/key/{timestamp}` | Retrieve a User Secret Key (USK). Requires `Authorization: Bearer <jwt>`. |
 | `POST` | `/v2/irma/sign/key` | Retrieve signing keys. Authenticate with a Yivi JWT or API key (`PG-API-<key>`). |
+
+Request body for signing keys:
+
+```json
+{
+  "pubSignId": [
+    {"t": "pbdf.gemeente.personalData.fullname"}
+  ],
+  "privSignId": [
+    {"t": "pbdf.sidn-pbdf.email.email"}
+  ]
+}
+```
 
 ### Health
 
@@ -213,11 +248,18 @@ The PKG server (`pg-pkg`) exposes an HTTP API. By default it listens on `http://
 | `GET` | `/health` | Health check. |
 | `GET` | `/metrics` | Prometheus metrics. |
 
+### Authentication
+
+The PKG supports two authentication methods:
+
+- **JWT (Yivi Sessions)**: After a Yivi disclosure, the IRMA server issues a JWT. Pass it as `Authorization: Bearer <jwt>`.
+- **API Keys**: For server-to-server use, API keys bypass interactive Yivi sessions. Pass as `Authorization: PG-API-<key>`. Keys are stored in PostgreSQL with pre-configured attributes.
+
 For the full API details with request/response examples, see the [architecture page](/guide/architecture#api-endpoints).
 
 ## WASM Bindings (pg-wasm)
 
-The `@e4a/pg-wasm` package provides WebAssembly bindings for PostGuard in browser environments. Install via npm:
+The `@e4a/pg-wasm` package provides WebAssembly bindings for PostGuard in browser environments. It supports both in-memory and streaming encryption/decryption using the Web Crypto API.
 
 ```bash
 npm install @e4a/pg-wasm
@@ -229,6 +271,109 @@ The package exports:
 - `Unsealer` and `StreamUnsealer` for decryption (in-memory and streaming)
 
 Both streaming variants use the Web Streams API (`ReadableStream`/`WritableStream`). For usage examples and the full JavaScript/TypeScript API, see the [SDK reference](/sdk/overview).
+
+### Encryption
+
+In-memory:
+
+```typescript
+import init, { seal } from '@e4a/pg-wasm';
+await init();
+
+const ciphertext = seal(masterPublicKey, {
+  policy: {
+    "recipient@example.com": {
+      t: Math.floor(Date.now() / 1000),
+      con: [{ t: "pbdf.sidn-pbdf.email.email", v: "recipient@example.com" }]
+    }
+  },
+  pubSignKey: publicSigningKey,
+  privSignKey: privateSigningKey,
+}, plaintext);
+```
+
+Streaming:
+
+```typescript
+import { sealStream } from '@e4a/pg-wasm';
+await sealStream(masterPublicKey, sealOptions, readableStream, writableStream);
+```
+
+### Decryption
+
+In-memory:
+
+```typescript
+import { Unsealer } from '@e4a/pg-wasm';
+const unsealer = Unsealer.new(ciphertextBytes, verificationKey);
+const recipients = unsealer.inspect_header();
+const { plaintext, policy } = unsealer.unseal(recipientId, userSecretKey);
+```
+
+Streaming:
+
+```typescript
+import { StreamUnsealer } from '@e4a/pg-wasm';
+const unsealer = await StreamUnsealer.new(readableStream, verificationKey);
+const recipients = unsealer.inspect_header();
+const verifiedPolicy = await unsealer.unseal(recipientId, userSecretKey, writableStream);
+```
+
+## Wire Format
+
+PostGuard ciphertexts follow a binary wire format (V3):
+
+```
+PREAMBLE (10 bytes)
+  PRELUDE      (4 bytes): 0x14 0x8A 0x8E 0xA7
+  VERSION      (2 bytes): u16 big-endian (currently 0x0002)
+  HEADER_LEN   (4 bytes): u32 big-endian
+
+HEADER (variable)
+  Header struct (bincode-serialized, max 1 MiB)
+  SIG_LEN      (4 bytes): u32 big-endian
+  HEADER_SIG   (variable): IBS signature over header
+
+PAYLOAD (variable)
+  AES-128-GCM encrypted data
+    In-memory: single ciphertext + auth tag
+    Streaming: 256 KiB segments, each with its own auth tag
+```
+
+## Yivi Integration
+
+PostGuard uses [Yivi](https://yivi.app/) (formerly IRMA) for attribute-based identity verification. Identities are expressed as conjunctions of Yivi attributes:
+
+```json
+[
+  {"t": "pbdf.sidn-pbdf.email.email", "v": "alice@example.com"},
+  {"t": "pbdf.gemeente.personalData.fullname", "v": "Alice Example"}
+]
+```
+
+Each attribute has a **type** (`t`, a fully-qualified Yivi attribute identifier) and an optional **value** (`v`). Omitting the value checks only that the attribute exists.
+
+### Sender Flow (Signing Keys)
+
+1. Client calls `POST /v2/irma/start` with the sender's signing policy.
+2. PKG creates an IRMA disclosure request.
+3. Sender scans the QR code with the Yivi app.
+4. Client retrieves the session JWT via `GET /v2/irma/jwt/{token}`.
+5. Client requests signing keys via `POST /v2/irma/sign/key` with the JWT.
+6. PKG validates the JWT and issues signing keys.
+
+### Recipient Flow (Decryption Keys)
+
+1. Client reads the ciphertext header and identifies the recipient's hidden policy.
+2. Client calls `POST /v2/irma/start` with the required attributes.
+3. Recipient scans the QR code.
+4. Client retrieves the JWT via `GET /v2/irma/jwt/{token}`.
+5. Client requests the USK via `GET /v2/irma/key/{timestamp}`.
+6. PKG validates the JWT, derives the KEM identity, and issues the USK.
+
+### Hidden Policies
+
+Ciphertext headers contain a hidden policy for each recipient. This shows attribute types but redacts values, so other recipients cannot see each other's identity details. Some attribute types may show partial hints (e.g., last 4 characters of a phone number) to help recipients identify which entry is theirs.
 
 ## Releasing
 
@@ -247,3 +392,7 @@ This repository uses [Release-plz](https://release-plz.ieni.dev/) for automated 
 | `build.yml` | Push/PR | Formatting checks, tests for all workspace members |
 | `delivery.yml` | Push to main | Release-plz, Docker build, FFI compilation, npm publish |
 | `docs.yml` | Push to main | Builds the Docusaurus site in `website/` and deploys to [GitHub Pages](https://encryption4all.github.io/postguard/) |
+
+## Funding
+
+Development of PostGuard was initially funded by the [Next Generation Internet initiative (NGI0)](https://nlnet.nl/NGI0/) and [NLnet](https://nlnet.nl/). The project is currently funded by a 4-year project from [NWO](https://www.nwo.nl/) under the name "Encryption 4 All".

@@ -13,6 +13,36 @@ Cryptify has two parts:
 - **Backend** (Rust, Rocket framework): Handles file storage, chunked uploads, email notifications, and serves the API.
 - **Frontend** (TypeScript): Web UI for uploading and downloading encrypted files.
 
+## Configuration
+
+The backend reads its configuration from a TOML file. Example configuration files are in `conf/`. Set the `ROCKET_CONFIG` environment variable to point to the configuration file.
+
+Configuration parameters:
+
+| Parameter | Description | Example |
+|---|---|---|
+| `server_url` | Public URL of the frontend (via nginx) | `http://localhost:8080/` |
+| `address` | Bind address | `0.0.0.0` |
+| `port` | Backend listen port | `8000` |
+| `data_dir` | Directory for storing uploaded files | `/tmp/data` |
+| `email_from` | Sender address for notification emails | `noreply@postguard.local` |
+| `smtp_url` | SMTP server hostname | `mailcrab` |
+| `smtp_port` | SMTP server port | `1025` |
+| `smtp_tls` | Enable TLS for SMTP | `false` |
+| `smtp_username` | Optional SMTP username | `user` |
+| `smtp_password` | Optional SMTP password | `pw` |
+| `allowed_origins` | Regex pattern for CORS allowed origins | `^https?://(localhost\|127\\.0\\.0\\.1)(:[0-9]+)?$` |
+| `pkg_url` | URL of the PostGuard PKG server | `http://postguard-pkg:8087` |
+
+## API
+
+The backend exposes a file upload/download API. An OpenAPI 3.0 specification is available in `api-description.yaml` in the repository root. The main endpoints:
+
+- `POST /fileupload/init` — Initialize a multipart file upload (takes sender email, recipient email, file size, mail content, and language).
+- `PUT /fileupload/{uuid}` — Upload a file chunk (use `Content-Range` header for chunked uploads).
+- `POST /fileupload/finalize/{uuid}` — Finalize the upload and send the notification email.
+- `GET /filedownload/{uuid}` — Download a file.
+
 ## Development
 
 ### Docker (recommended)

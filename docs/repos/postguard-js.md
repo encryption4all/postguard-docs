@@ -84,7 +84,7 @@ const sealed = pg.encrypt({
 });
 
 const encrypted = await sealed.toBytes();
-// encrypted is a Uint8Array
+// encrypted is a Uint8Array — attach it, send it, store it however you want
 ```
 
 ## Decryption
@@ -134,16 +134,17 @@ pg.sign.apiKey('your-api-key')
 pg.sign.yivi({
   element: '#yivi-popup',
   senderEmail: 'alice@example.com',
-  attributes: [
+  attributes: [                    // optional: request extra attributes
     { t: 'pbdf.gemeente.personalData.fullname', optional: true },
     { t: 'pbdf.sidn-pbdf.mobilenumber.mobilenumber', optional: true },
   ],
-  includeSender: true,
+  includeSender: true,             // optional: also encrypt for the sender
 })
 
 // Custom session callback (email addons, mobile apps, etc.)
 pg.sign.session(
   async ({ con, sort }) => {
+    // Show your own Yivi UI, return the JWT
     return await myCustomYiviFlow(con, sort);
   },
   { senderEmail: 'alice@example.com' }
@@ -189,9 +190,12 @@ const sealed = pg.encrypt({
 });
 
 const envelope = await pg.email.createEnvelope({ sealed, from: 'alice@example.com' });
-// envelope.subject, envelope.htmlBody, envelope.plainTextBody, envelope.attachment
+// envelope.subject → "PostGuard Encrypted Email"
+// envelope.htmlBody → Placeholder HTML with PostGuard branding
+// envelope.plainTextBody → Plain text fallback
+// envelope.attachment → File("postguard.encrypted")
 
-// On the receiving side: extract and decrypt
+// --- On the receiving side ---
 const ciphertext = extractCiphertext({
   htmlBody: emailBodyHtml,
   attachments: [{ name: 'postguard.encrypted', data: attachmentBuffer }],
@@ -199,6 +203,14 @@ const ciphertext = extractCiphertext({
 
 const opened = pg.open({ data: ciphertext });
 const result = await opened.decrypt({ element: '#yivi-popup', recipient: 'bob@example.com' });
+// result.plaintext → decrypted MIME content
+// result.sender → verified sender identity
+```
+
+Standalone email helpers (`buildMime`, `extractCiphertext`, `injectMimeHeaders`) can be imported directly without creating a PostGuard instance:
+
+```ts
+import { buildMime, extractCiphertext, injectMimeHeaders } from '@e4a/pg-js';
 ```
 
 ## Error Handling

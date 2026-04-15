@@ -27,8 +27,8 @@ cp .env.example .env   # adjust if needed
 ### Build and Run
 
 ```bash
-npm run build          # production build → dist/
-npm run build:dev      # development build (no minification, keeps console.log)
+npm run build          # production build, output in dist/
+npm run build:dev      # development build (no minification, preserves console.log)
 npm run watch          # dev build with file watching
 ```
 
