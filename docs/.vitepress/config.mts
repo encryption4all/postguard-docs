@@ -21,6 +21,7 @@ export default defineConfig({
           { text: 'Core Concepts', link: '/guide/concepts' },
           { text: 'Architecture', link: '/guide/architecture' },
           { text: 'Getting Started', link: '/guide/getting-started' },
+          { text: 'Protocol Specification', link: '/guide/protocol' },
         ],
       },
       {
