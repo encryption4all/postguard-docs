@@ -1,14 +1,18 @@
-# Web Application Integration
+# pg-sveltekit
 
-This guide shows how to integrate PostGuard encryption and decryption into a web application. The examples come from the [postguard-examples](https://github.com/encryption4all/postguard-examples) repository and use SvelteKit, but the patterns apply to any frontend framework.
+[GitHub](https://github.com/encryption4all/postguard-examples/tree/main/pg-sveltekit) · TypeScript · SvelteKit Example
+
+A SvelteKit application demonstrating PostGuard file encryption and decryption in a web browser using `@e4a/pg-js`. Part of the [postguard-examples](https://github.com/encryption4all/postguard-examples) repository.
+
+## Running
+
+```bash
+cd pg-sveltekit
+npm install
+npm run dev
+```
 
 ## Setup
-
-Install the SDK:
-
-```sh
-npm install @e4a/pg-js
-```
 
 You need two Vite plugins for WASM support:
 
@@ -31,7 +35,7 @@ export default defineConfig({
 
 No Node.js polyfills are needed. The SDK handles browser compatibility internally.
 
-Configure the PKG and Cryptify URLs via environment variables:
+Configure the PKG and Cryptify URLs via environment variables. Keep the API key server-side only:
 
 ```sh
 # Public (available in browser)
@@ -45,8 +49,6 @@ PG_API_KEY=PG-API-your-key-here
 
 <small>[Source: .env.example](https://github.com/encryption4all/postguard-examples/blob/d6c7f01d3cb63d84e94b1e59079b0d80d748d23b/pg-sveltekit/.env.example)</small>
 
-Keep the API key server-side only:
-
 ```ts
 import { env } from '$env/dynamic/private';
 
@@ -54,8 +56,6 @@ export const PG_API_KEY = env['PG_API_KEY'] ?? '';
 ```
 
 <small>[Source: config.server.ts](https://github.com/encryption4all/postguard-examples/blob/d6c7f01d3cb63d84e94b1e59079b0d80d748d23b/pg-sveltekit/src/lib/config.server.ts)</small>
-
-The public config provides the PKG and Cryptify URLs to the browser:
 
 ```ts
 import { env } from '$env/dynamic/public';
@@ -108,7 +108,7 @@ export async function encryptAndSend(options: EncryptAndSendOptions): Promise<st
 
 <small>[Source: encryption.ts](https://github.com/encryption4all/postguard-examples/blob/d6c7f01d3cb63d84e94b1e59079b0d80d748d23b/pg-sveltekit/src/lib/postguard/encryption.ts)</small>
 
-Then build a page that calls this function. The server load function passes the API key to the page:
+The server load function passes the API key to the page:
 
 ```ts
 import { PG_API_KEY } from '$lib/config.server';
@@ -211,7 +211,7 @@ The template renders a Yivi QR container that the SDK populates:
 
 ## Yivi QR Styling
 
-The Yivi QR container needs some CSS to render properly. Import the Yivi CSS or add minimal styles:
+The Yivi QR container needs some CSS to render properly:
 
 ```css
 #yivi-qr, #yivi-web {

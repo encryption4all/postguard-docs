@@ -26,9 +26,9 @@ The sender never needs to look anything up or coordinate with the recipient. Enc
 
 ### Cryptographic details
 
-PostGuard uses the CGW Anonymous IBE scheme (variant CGWKV) with multi-recipient key encapsulation (MKEM), built on the BLS12-381 elliptic curve. This provides approximately 120-bit security. Identities are derived by hashing policies (attribute types, values, and a timestamp) with SHA3-512 using domain separation.
+PostGuard uses the CGW Anonymous IBE scheme (variant CGWKV) with multi-recipient key encapsulation (mIBKEM), built on the BLS12-381 elliptic curve. This provides approximately 128 bits of security. Identities are derived by hashing policies (attribute types, values, and a timestamp) with SHA3-512 using domain separation. See the [identity derivation algorithm](/guide/protocol#mapping-yivi-identities-to-ibc-identities) for the exact procedure.
 
-Symmetric encryption uses AES-128-GCM (matching the BLS12-381 security level). The SDK supports both in-memory and streaming encryption, with streaming using 256 KiB chunks by default.
+Symmetric encryption uses AES-128-GCM (matching the BLS12-381 security level). The SDK supports both in-memory and streaming encryption, with streaming using 256 KiB chunks and per-segment signatures by default. For the full cryptographic specification, see the [protocol specification](/guide/protocol).
 
 ## PKG (Private Key Generator)
 
@@ -228,8 +228,10 @@ PAYLOAD (variable)
   (includes message signature for authentication)
 ```
 
-The header contains one entry per recipient, each with the recipient's hidden policy (attribute types visible, values redacted) and a multi-recipient ciphertext. The payload contains the actual encrypted data with a sign-then-encrypt composition.
+The header contains one entry per recipient, each with the recipient's hidden policy (attribute types visible, values redacted) and a multi-recipient ciphertext. The payload contains the actual encrypted data with a Sign-then-Encrypt composition.
+
+For the full wire format diagrams (in-memory and streaming mode), JSON header examples, and the email MIME format, see the [protocol specification](/guide/protocol#wire-format).
 
 ## Next steps
 
-Now that you understand the concepts, see the [architecture overview](/guide/architecture) to learn how these components connect and communicate.
+Now that you understand the concepts, see the [architecture overview](/guide/architecture) to learn how these components connect and communicate, or the [protocol specification](/guide/protocol) for the full cryptographic details.

@@ -183,10 +183,10 @@ async function openYiviDialogForSigning(con: AttributeCon): Promise<string> {
 
 <small>[Source: commands.ts#L149-L189](https://github.com/encryption4all/postguard-outlook-addon/blob/dd0073b568a94524e2658dd44e2851d2dccfac82/src/commands/commands.ts#L149-L189)</small>
 
-See the [Email Addon Integration](/integrations/email-addon) guide for the full patterns.
+See the [Thunderbird addon](/repos/postguard-tb-addon) and [Outlook addon](/repos/postguard-outlook-addon) pages for the full patterns.
 
 ## Decryption Authentication
 
 Decryption also requires identity verification. The same `element` and `session` patterns apply. You must provide either `element` or `session` when calling `opened.decrypt()`. If neither is provided, the SDK throws a `DecryptionError`.
 
-Pass `enableCache: true` to cache the Yivi JWT across multiple `decrypt()` calls. This avoids forcing the user to scan a QR code for every message when decrypting a batch. See [Decryption: JWT caching](/sdk/decryption#jwt-caching) for details.
+Pass `enableCache: true` to cache the Yivi JWT across multiple `decrypt()` calls. This avoids forcing the user to scan a QR code for every message when decrypting a batch. See [Decryption: JWT caching](/sdk/js-decryption#jwt-caching) for details.

@@ -149,4 +149,4 @@ try {
 
 <small>[Source: +page.svelte#L44-L63](https://github.com/encryption4all/postguard-examples/blob/d6c7f01d3cb63d84e94b1e59079b0d80d748d23b/pg-sveltekit/src/routes/download/+page.svelte#L44-L63)</small>
 
-See [Error Handling](/sdk/errors) for the full error reference.
+See [Error Handling](/sdk/js-errors) for the full error reference.

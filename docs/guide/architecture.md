@@ -58,6 +58,28 @@ IBS Master Key Pair (lives on the PKG server)
         Used to derive per-sender signing keys
 ```
 
+## Session Flow
+
+A typical PostGuard session works as follows. Red actions require user interaction; all other actions are automatic.
+
+<p align="center">
+  <img src="/postguard-flow.png" alt="PostGuard session flow"/>
+</p>
+
+0. The PKG generates a master key pair.
+1. Alice's client retrieves the public master key from the PKG.
+2. Alice uses the public master key and Bob's identity to encrypt a message.
+3. Alice's client sends the ciphertext to Bob via any channel.
+4. Bob's client asks for a key to decrypt the ciphertext.
+5. The PKG starts an authentication session at the Yivi server.
+6. Bob is asked to reveal his identity via a QR code.
+7. Bob reveals his identity.
+8. The Yivi server sends the authentication results to the PKG.
+9. The PKG issues a key for Bob's identity.
+10. Bob's client decrypts the ciphertext using his key.
+
+The sections below break down the encryption and decryption steps in more detail.
+
 ## Encryption Flow
 
 Here is what happens when a sender encrypts data:

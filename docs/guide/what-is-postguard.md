@@ -61,4 +61,4 @@ PostGuard is useful anywhere you need to send sensitive data to a specific perso
 
 - Learn the [core concepts](/guide/concepts) behind PostGuard: IBE, the PKG, Yivi, policies, and timestamps
 - See the full [system architecture](/guide/architecture) to understand how the components fit together
-- Jump to [getting started](/guide/getting-started) to install the SDK and encrypt your first message
+- Jump to [getting started](/sdk/getting-started) to install the SDK and encrypt your first message

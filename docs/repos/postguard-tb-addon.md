@@ -1,12 +1,14 @@
-# Email Addon Integration
+# postguard-tb-addon
 
-This guide explains how to build an email addon (Thunderbird, Outlook, or similar) using the PostGuard SDK. Email addons run in extension environments where DOM-based Yivi rendering is handled in separate popup windows.
+[GitHub](https://github.com/encryption4all/postguard-tb-addon) · TypeScript · Thunderbird Extension
 
-Both the [Thunderbird addon](https://github.com/encryption4all/postguard-tb-addon) and the [Outlook addon](https://github.com/encryption4all/postguard-outlook-addon) follow the patterns described here. All code snippets below come directly from those repositories.
+End-to-end email encryption extension for Mozilla Thunderbird. Uses identity-based encryption via [Yivi](https://yivi.app) so users can send and receive encrypted emails without managing keys.
+
+## How It Works
+
+The addon integrates into Thunderbird's compose and message display windows. When sending, it encrypts the email body and attachments using `@e4a/pg-js` and wraps the result in a standard email with a PostGuard placeholder body and an encrypted attachment. When viewing a received PostGuard email, it detects the encrypted attachment, prompts the user to authenticate with Yivi, and decrypts the content inline.
 
 ## Architecture
-
-An email addon typically has three components:
 
 ```
 +---------------------------+
@@ -33,11 +35,9 @@ An email addon typically has three components:
 
 The popup owns all crypto operations and the PostGuard SDK instance. The background script uses standalone email helper functions (imported directly from `@e4a/pg-js`) for MIME building and ciphertext extraction, without instantiating PostGuard.
 
-## Popup-Owns-Crypto Pattern
+### Popup-Owns-Crypto Pattern
 
-The background script cannot render DOM elements, and the Yivi QR code needs a visible HTML element. The Thunderbird addon solves this by opening a popup window that creates its own `PostGuard` instance, runs the full encrypt or decrypt flow, and sends the result back.
-
-### Opening the popup (background script)
+The background script cannot render DOM elements, and the Yivi QR code needs a visible HTML element. The addon solves this by opening a popup window that creates its own `PostGuard` instance, runs the full encrypt or decrypt flow, and sends the result back.
 
 The background script opens a popup, registers it in a pending map before the popup can send its init message (preventing a race condition), and waits for the result:
 
@@ -79,8 +79,6 @@ async function openCryptoPopup(data: CryptoPopupInitData): Promise<CryptoPopupRe
 ```
 
 <small>[Source: background.ts#L260-L293](https://github.com/encryption4all/postguard-tb-addon/blob/57234eebd32d64bd011086fe89ecdd7ac40fc15d/src/background/background.ts#L260-L293)</small>
-
-### Popup initialization
 
 The popup resolves its own window ID, requests its operation data from the background, then creates a PostGuard instance and runs the operation:
 
@@ -127,7 +125,7 @@ async function init() {
 
 <small>[Source: yivi-popup.ts#L21-L88](https://github.com/encryption4all/postguard-tb-addon/blob/57234eebd32d64bd011086fe89ecdd7ac40fc15d/src/pages/yivi-popup/yivi-popup.ts#L21-L88)</small>
 
-### Encrypt handler (popup)
+### Encrypt Handler
 
 The popup rebuilds typed recipients from serialized data, encrypts with element-based Yivi signing, creates the email envelope, and sends the result back:
 
@@ -179,7 +177,7 @@ async function handleEncrypt(pg: PostGuard, data: EncryptPopupData, windowId: nu
 
 <small>[Source: yivi-popup.ts#L90-L136](https://github.com/encryption4all/postguard-tb-addon/blob/57234eebd32d64bd011086fe89ecdd7ac40fc15d/src/pages/yivi-popup/yivi-popup.ts#L90-L136)</small>
 
-### Decrypt handler (popup)
+### Decrypt Handler
 
 ```ts
 async function handleDecrypt(pg: PostGuard, data: DecryptPopupData, windowId: number) {
@@ -207,7 +205,7 @@ async function handleDecrypt(pg: PostGuard, data: DecryptPopupData, windowId: nu
 
 ## Email Encryption Flow
 
-The background script intercepts the compose send event, builds the MIME, and delegates encryption to the popup. The key steps are:
+The background script intercepts the compose send event, builds the MIME, and delegates encryption to the popup:
 
 1. Build attachments list from the compose tab
 2. Fetch threading headers if replying
@@ -263,11 +261,7 @@ resolve({
 
 <small>[Source: background.ts#L382-L456](https://github.com/encryption4all/postguard-tb-addon/blob/57234eebd32d64bd011086fe89ecdd7ac40fc15d/src/background/background.ts#L382-L456)</small>
 
-### BCC limitation
-
-PostGuard does not support BCC recipients. The Thunderbird addon blocks sending and shows a notification if any BCC recipients are present when encryption is enabled.
-
-### Sent copy management
+BCC recipients are not supported. The addon blocks sending and shows a notification if any BCC recipients are present when encryption is enabled.
 
 After sending, the addon stores the unencrypted MIME in a "PostGuard Sent" folder so the sender can read their own messages later.
 
@@ -319,8 +313,6 @@ const importedMsg = await browser.messages.import(file, msg.folder.id);
 
 ## Detecting PostGuard Emails
 
-Check if a message is PostGuard-encrypted by looking for the attachment or armored payload marker:
-
 ```ts
 async function isPGEncrypted(msgId: number): Promise<boolean> {
   const attachments = await browser.messages.listAttachments(msgId);
@@ -340,78 +332,9 @@ async function isPGEncrypted(msgId: number): Promise<boolean> {
 
 <small>[Source: background.ts#L226-L240](https://github.com/encryption4all/postguard-tb-addon/blob/57234eebd32d64bd011086fe89ecdd7ac40fc15d/src/background/background.ts#L226-L240)</small>
 
-## Outlook-Specific Notes
+## Bundling
 
-The Outlook addon uses the Office JS API instead of WebExtension APIs:
-
-- Manifest: XML-based (`manifest.xml`) instead of `manifest.json`
-- Taskpane: decryption UI shown in a side panel when reading encrypted messages
-- Compose pane: encryption toggle and policy editor
-- Dialog: `Office.context.ui.displayDialogAsync()` for Yivi popups, with `messageParent()` to return JWTs
-- Event handlers: `OnMessageSend` for encryption, `OnMessageRead` for auto-decryption
-- State: `sessionStorage` for compose state (encryption toggle, policies, signing identity)
-
-The core encryption/decryption logic is the same. Only the UI plumbing and extension APIs differ.
-
-### Yivi dialog (Outlook)
-
-The Outlook addon opens a dialog for Yivi sessions using `Office.context.ui.displayDialogAsync()`:
-
-```ts
-async function openYiviDialogForSigning(con: AttributeCon): Promise<string> {
-  const dialogData = {
-    hostname: PKG_URL,
-    header: PG_CLIENT_HEADER,
-    con,
-    sort: "Signing",
-    validity: secondsTill4AM(),
-  };
-
-  const encodedData = encodeURIComponent(JSON.stringify(dialogData));
-  const dialogUrl = `${window.location.origin}/dialog.html?data=${encodedData}`;
-
-  return new Promise<string>((resolve, reject) => {
-    Office.context.ui.displayDialogAsync(
-      dialogUrl,
-      { height: 60, width: 40, promptBeforeOpen: false },
-      (asyncResult) => {
-        if (asyncResult.status !== Office.AsyncResultStatus.Succeeded) {
-          reject(new Error("Failed to open signing dialog"));
-          return;
-        }
-        const dialog = asyncResult.value;
-
-        dialog.addEventHandler(Office.EventType.DialogMessageReceived, (arg: { message: string }) => {
-          dialog.close();
-          try {
-            const message = JSON.parse(arg.message);
-            if (message.jwt) resolve(message.jwt);
-            else reject(new Error(message.error || "No JWT"));
-          } catch {
-            reject(new Error("Invalid dialog response"));
-          }
-        });
-
-        dialog.addEventHandler(Office.EventType.DialogEventReceived, () => {
-          reject(new Error("Dialog was closed"));
-        });
-      }
-    );
-  });
-}
-```
-
-<small>[Source: commands.ts#L149-L189](https://github.com/encryption4all/postguard-outlook-addon/blob/dd0073b568a94524e2658dd44e2851d2dccfac82/src/commands/commands.ts#L149-L189)</small>
-
-## Bundling Considerations
-
-### WASM handling
-
-The SDK inlines its WASM binary as base64 at build time. No WASM loader plugins or file copying is needed. The addon bundles with esbuild, and the WASM is included in the JS output automatically.
-
-For web applications using Vite, you can use `vite-plugin-wasm` and `vite-plugin-top-level-await` instead. These resolve `.wasm` imports as separate files served by the dev server or bundled as static assets. Both approaches produce the same result at runtime; the base64 inlining just avoids the need for separate file serving, which is important in extension contexts.
-
-### Standalone email helpers
+The SDK inlines its WASM binary as base64 at build time, so no WASM loader plugins or file copying is needed. The addon bundles with esbuild and the WASM is included in the JS output automatically.
 
 The background script only needs MIME building and ciphertext extraction. These are pure functions that don't require a PostGuard instance:
 
@@ -419,11 +342,9 @@ The background script only needs MIME building and ciphertext extraction. These 
 import { buildMime, extractCiphertext, injectMimeHeaders } from "@e4a/pg-js";
 ```
 
-The full PostGuard class (with WASM, crypto, and Yivi) is only instantiated in the popup where it is needed.
+The full PostGuard class (with WASM, crypto, and Yivi) is only instantiated in the popup where it is needed. The `@e4a/pg-js` bundle (including inlined WASM) is around 2 MB. Since the crypto popup is the only entry point that imports `PostGuard`, this cost is isolated to the popup bundle.
 
-### Content Security Policy
-
-Your extension manifest must allow WASM execution. For Manifest V3:
+Your extension manifest must allow WASM execution:
 
 ```json
 "content_security_policy": {
@@ -431,10 +352,53 @@ Your extension manifest must allow WASM execution. For Manifest V3:
 }
 ```
 
-### EventSource polyfill
-
 The Yivi client uses `EventSource` for server-sent events. In Thunderbird, `EventSource` is not available in extension pages. The SDK disables SSE and uses polling by default, so no polyfill is needed. If you use the Yivi packages directly, you may need to shim the `EventSource` import in your bundler config.
 
-### File size
+## Development
 
-The `@e4a/pg-js` bundle (including inlined WASM) is around 2 MB. Since the crypto popup is the only entry point that imports `PostGuard`, this cost is isolated to the popup bundle. The background script imports only the standalone email helpers, which add minimal size.
+### Prerequisites
+
+- [Node.js](https://nodejs.org/) 20+
+- [Thunderbird](https://www.thunderbird.net/) 128+
+
+### Setup
+
+```bash
+npm install
+cp .env.example .env   # adjust if needed
+```
+
+### Build and Run
+
+```bash
+npm run build          # production build, output in dist/
+npm run build:dev      # development build (no minification, preserves console.log)
+npm run watch          # dev build with file watching
+```
+
+To load the extension in Thunderbird: open **Add-ons Manager** > **gear icon** > **Debug Add-ons** > **Load Temporary Add-on**, then select any file inside the `dist/` folder.
+
+## Releasing
+
+The version must be updated in three files before releasing:
+
+1. `package.json` (`"version"`)
+2. `manifest.json` (`"version"`)
+3. `updates.json` (add a new entry with the new version)
+
+Then commit, push, and tag:
+
+```bash
+git add package.json manifest.json updates.json
+git commit -m "Bump version to X.Y.Z"
+git push origin main
+git tag vX.Y.Z && git push origin vX.Y.Z
+```
+
+Pushing a `v*` tag triggers the CI pipeline which builds the `.xpi` file and creates a GitHub release.
+
+## CI/CD
+
+| Workflow | Trigger | What it does |
+|---|---|---|
+| `build.yml` | Tag push (`v*`) | Validates version consistency, builds, packages `.xpi`, creates GitHub release |

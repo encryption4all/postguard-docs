@@ -9,7 +9,7 @@ export default defineConfig({
     nav: [
       { text: 'Guide', link: '/guide/what-is-postguard' },
       { text: 'SDK', link: '/sdk/overview' },
-      { text: 'Integrations', link: '/integrations/web-app' },
+      { text: 'Repositories', link: '/repos/overview' },
     ],
     sidebar: [
       {
@@ -19,25 +19,76 @@ export default defineConfig({
           { text: 'Usage Flows', link: '/guide/usage-flows' },
           { text: 'Core Concepts', link: '/guide/concepts' },
           { text: 'Architecture', link: '/guide/architecture' },
-          { text: 'Getting Started', link: '/guide/getting-started' },
+          { text: 'Protocol Specification', link: '/guide/protocol' },
         ],
       },
       {
         text: 'SDK Reference',
         items: [
           { text: 'Overview', link: '/sdk/overview' },
-          { text: 'Encryption', link: '/sdk/encryption' },
-          { text: 'Decryption', link: '/sdk/decryption' },
-          { text: 'Email Helpers', link: '/sdk/email-helpers' },
-          { text: 'Authentication Methods', link: '/sdk/auth-methods' },
-          { text: 'Error Handling', link: '/sdk/errors' },
+          { text: 'Getting Started', link: '/sdk/getting-started' },
+          {
+            text: 'JavaScript SDK',
+            collapsed: false,
+            items: [
+              { text: 'Encryption', link: '/sdk/js-encryption' },
+              { text: 'Decryption', link: '/sdk/js-decryption' },
+              { text: 'Email Helpers', link: '/sdk/js-email-helpers' },
+              { text: 'Authentication Methods', link: '/sdk/js-auth-methods' },
+              { text: 'Error Handling', link: '/sdk/js-errors' },
+            ],
+          },
+          {
+            text: '.NET SDK',
+            collapsed: false,
+            items: [
+              { text: 'Encryption', link: '/sdk/dotnet-encryption' },
+              { text: 'Error Handling', link: '/sdk/dotnet-errors' },
+            ],
+          },
         ],
       },
       {
-        text: 'Integrations',
+        text: 'Repositories',
         items: [
-          { text: 'Web Application', link: '/integrations/web-app' },
-          { text: 'Email Addon', link: '/integrations/email-addon' },
+          { text: 'Overview', link: '/repos/overview' },
+          {
+            text: 'Cryptographic Libraries',
+            collapsed: false,
+            items: [
+              { text: 'pg-curve', link: '/repos/pg-curve' },
+              { text: 'ibe', link: '/repos/ibe' },
+              { text: 'ibs', link: '/repos/ibs' },
+            ],
+          },
+          {
+            text: 'Core',
+            collapsed: false,
+            items: [
+              { text: 'postguard', link: '/repos/postguard' },
+              { text: 'postguard-website', link: '/repos/postguard-website' },
+              { text: 'cryptify', link: '/repos/cryptify' },
+              { text: 'postguard-tb-addon', link: '/repos/postguard-tb-addon' },
+              { text: 'postguard-outlook-addon', link: '/repos/postguard-outlook-addon' },
+            ],
+          },
+          {
+            text: 'SDKs',
+            collapsed: false,
+            items: [
+              { text: 'postguard-js', link: '/repos/postguard-js' },
+              { text: 'postguard-dotnet', link: '/repos/postguard-dotnet' },
+              { text: 'pg-components', link: '/repos/pg-components' },
+            ],
+          },
+          {
+            text: 'postguard-examples',
+            collapsed: false,
+            items: [
+              { text: 'pg-sveltekit', link: '/repos/pg-sveltekit' },
+              { text: 'pg-dotnet', link: '/repos/pg-dotnet' },
+            ],
+          },
         ],
       },
     ],
