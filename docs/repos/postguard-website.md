@@ -4,6 +4,18 @@
 
 The PostGuard web frontend for encrypting and sending files. Users pick files, choose recipients by email address, authenticate with [Yivi](https://yivi.app), and the files are encrypted and uploaded to [Cryptify](/repos/cryptify) for delivery. Built with SvelteKit using the static adapter.
 
+## Integration
+
+The website uses `@e4a/pg-js` with two Vite plugins for WASM support (`vite-plugin-wasm` and `vite-plugin-top-level-await`). It also uses `@e4a/pg-components` for shared UI elements like file pickers and Yivi authentication dialogs.
+
+The website contains two submodules: Cryptify (the file sharing backend, embedded in an iframe) and the Thunderbird addon (the `.xpi` file can be downloaded from the website). To update the submodules:
+
+```bash
+git submodule update --init --recursive
+```
+
+For a step-by-step example of building a web application with PostGuard, see the [pg-sveltekit](/repos/pg-sveltekit) example, which follows the same patterns as this website.
+
 ## Development
 
 ### Quick Start with Docker Compose (recommended)

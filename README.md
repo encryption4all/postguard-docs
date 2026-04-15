@@ -1,6 +1,6 @@
 # postguard-docs
 
-> For full documentation, visit [docs.postguard.eu](https://docs.postguard.eu/repos/postguard-docs).
+> For full documentation, visit [docs.postguard.eu](https://docs.postguard.eu).
 
 The central documentation site for the PostGuard project. Built with [VitePress](https://vitepress.dev/) and hosted at [docs.postguard.eu](https://docs.postguard.eu).
 

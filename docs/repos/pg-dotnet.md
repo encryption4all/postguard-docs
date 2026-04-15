@@ -1,37 +1,23 @@
-# postguard-examples
+# pg-dotnet
 
-[GitHub](https://github.com/encryption4all/postguard-examples) · TypeScript, C# · Example Applications
+[GitHub](https://github.com/encryption4all/postguard-examples/tree/main/pg-dotnet) · C# · .NET Example
 
-Example applications showing how to integrate PostGuard into different platforms. Use these as starting points for your own integration.
+A .NET console application demonstrating the [postguard-dotnet](/repos/postguard-dotnet) SDK for the "Informatierijk notificeren" use case. Part of the [postguard-examples](https://github.com/encryption4all/postguard-examples) repository.
 
-## Examples
-
-### SvelteKit Web App (`pg-sveltekit/`)
-
-A SvelteKit application demonstrating PostGuard file encryption and decryption in a web browser using `@e4a/pg-js`.
-
-```bash
-cd pg-sveltekit
-npm install
-npm run dev
-```
-
-### .NET Console App (`pg-dotnet/`)
-
-A .NET console application demonstrating the [postguard-dotnet](/repos/postguard-dotnet) SDK for the "Informatierijk notificeren" use case. It shows two patterns:
+It shows two patterns:
 
 1. **Encrypt and Upload** — Encrypts sample files for a citizen (exact email) and an organisation (email domain), uploads to Cryptify, and returns a UUID for custom distribution.
 2. **Encrypt and Deliver** — Same as above, but also sends an email notification to the recipient via Cryptify.
 
-**Prerequisites:**
+## Prerequisites
 
 - .NET 8.0+ SDK
 - Rust toolchain via [rustup](https://rustup.rs/) (for building the native crypto library)
 - A PostGuard API key
 
-**Setup:**
+## Setup
 
-Clone postguard-dotnet alongside this repo:
+Clone postguard-dotnet alongside the examples repo:
 
 ```
 Repos/
@@ -62,7 +48,7 @@ export PG_CRYPTIFY_URL="https://fileshare.postguard.eu"
 dotnet run
 ```
 
-**Usage example:**
+## Usage
 
 ```csharp
 var pg = new PostGuard(new PostGuardConfig
@@ -90,7 +76,3 @@ var result = await sealed.UploadAsync(new UploadOptions
     Notify = new NotifyOptions { Message = "Your documents", Language = "EN" }
 });
 ```
-
-## Code Snippets
-
-The examples in this repo are used as the source for code snippets in the [PostGuard documentation](https://docs.postguard.eu). When updating examples, keep in mind that documentation snippets reference specific commit hashes.

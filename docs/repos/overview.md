@@ -14,11 +14,15 @@ These are the low-level building blocks that implement the cryptographic primiti
 
 ## Core
 
-The main PostGuard codebase, containing the encryption protocol, PKG server, WASM bindings, and CLI.
+The main PostGuard codebase and applications.
 
 | Repository | Language | Description |
 |---|---|---|
 | [postguard](/repos/postguard) | Rust | Core library, PKG server, WASM bindings, CLI, FFI bindings |
+| [postguard-website](/repos/postguard-website) | SvelteKit | Web frontend for encrypting and sending files |
+| [cryptify](/repos/cryptify) | Rust + TypeScript | File encryption and sharing service (backend + frontend) |
+| [postguard-tb-addon](/repos/postguard-tb-addon) | TypeScript | Thunderbird email encryption extension |
+| [postguard-outlook-addon](/repos/postguard-outlook-addon) | TypeScript | Outlook email encryption add-in |
 
 ## SDKs
 
@@ -31,26 +35,14 @@ Client libraries for integrating PostGuard into applications.
 | [irmaseal-mail-utils](/repos/irmaseal-mail-utils) | TypeScript | Email parsing and composition utilities (`@e4a/irmaseal-mail-utils`) |
 | [pg-components](/repos/pg-components) | Svelte | Reusable UI component library (`@e4a/pg-components`) |
 
-## Applications
+## Examples
 
-End-user applications and services built on PostGuard.
+From the [postguard-examples](https://github.com/encryption4all/postguard-examples) repository:
 
-| Repository | Language | Description |
+| Project | Language | Description |
 |---|---|---|
-| [postguard-website](/repos/postguard-website) | SvelteKit | Web frontend for encrypting and sending files |
-| [postguard-tb-addon](/repos/postguard-tb-addon) | TypeScript | Thunderbird email encryption extension |
-| [postguard-outlook-addon](/repos/postguard-outlook-addon) | TypeScript | Outlook email encryption add-in |
-| [cryptify](/repos/cryptify) | Rust + TypeScript | File encryption and sharing service (backend + frontend) |
-| [postguard-fallback](/repos/postguard-fallback) | Rust | Web-based decryption fallback service |
-
-## Examples and Documentation
-
-| Repository | Language | Description |
-|---|---|---|
-| [postguard-examples](/repos/postguard-examples) | TypeScript, C# | Example applications (SvelteKit, .NET) |
-| [pg-example](/repos/pg-example) | TypeScript | Standalone example app for file/string encryption |
-| [pdf-signature](/repos/pdf-signature) | Rust + TypeScript | PDF signing and verification |
-| [postguard-docs](/repos/postguard-docs) | VitePress | This documentation site |
+| [pg-sveltekit](/repos/pg-sveltekit) | TypeScript | SvelteKit web app using `@e4a/pg-js` |
+| [pg-dotnet](/repos/pg-dotnet) | C# | .NET console app using `E4A.PostGuard` |
 
 ## Dependency Graph
 

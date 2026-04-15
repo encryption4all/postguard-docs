@@ -114,7 +114,7 @@ const result = await openCryptoPopup({
 
 <small>[Source: background.ts#L382-L434](https://github.com/encryption4all/postguard-tb-addon/blob/57234eebd32d64bd011086fe89ecdd7ac40fc15d/src/background/background.ts#L382-L434)</small>
 
-See the [email addon integration guide](/integrations/email-addon) for the full popup-owns-crypto pattern.
+See the [Thunderbird addon](/repos/postguard-tb-addon#popup-owns-crypto-pattern) for the full popup-owns-crypto pattern.
 
 ## 3. Decrypt
 
@@ -190,7 +190,7 @@ const pg = new PostGuard(data.config);
 
 <small>[Source: background.ts#L3](https://github.com/encryption4all/postguard-tb-addon/blob/57234eebd32d64bd011086fe89ecdd7ac40fc15d/src/background/background.ts#L3), [yivi-popup.ts#L4](https://github.com/encryption4all/postguard-tb-addon/blob/57234eebd32d64bd011086fe89ecdd7ac40fc15d/src/pages/yivi-popup/yivi-popup.ts#L4)</small>
 
-Your extension manifest must allow WASM execution (`'wasm-unsafe-eval'` in Manifest V3 CSP). See the [email addon guide](/integrations/email-addon#bundling-considerations) for full bundling details.
+Your extension manifest must allow WASM execution (`'wasm-unsafe-eval'` in Manifest V3 CSP). See the [Thunderbird addon bundling section](/repos/postguard-tb-addon#bundling) for full details.
 
 ## Next Steps
 
@@ -198,5 +198,7 @@ Your extension manifest must allow WASM execution (`'wasm-unsafe-eval'` in Manif
 - [Encryption](/sdk/encryption): all encryption options in depth
 - [Decryption](/sdk/decryption): UUID and raw data decryption
 - [Authentication Methods](/sdk/auth-methods): API key, Yivi, and session callbacks
-- [Web Application Integration](/integrations/web-app): full SvelteKit example
-- [Email Addon Integration](/integrations/email-addon): Thunderbird and Outlook patterns
+- [pg-sveltekit](/repos/pg-sveltekit): full SvelteKit web app example
+- [pg-dotnet](/repos/pg-dotnet): .NET console app example
+- [postguard-tb-addon](/repos/postguard-tb-addon): Thunderbird addon architecture and code
+- [postguard-outlook-addon](/repos/postguard-outlook-addon): Outlook add-in architecture

@@ -9,7 +9,6 @@ export default defineConfig({
     nav: [
       { text: 'Guide', link: '/guide/what-is-postguard' },
       { text: 'SDK', link: '/sdk/overview' },
-      { text: 'Integrations', link: '/integrations/web-app' },
       { text: 'Repositories', link: '/repos/overview' },
     ],
     sidebar: [
@@ -36,13 +35,6 @@ export default defineConfig({
         ],
       },
       {
-        text: 'Integrations',
-        items: [
-          { text: 'Web Application', link: '/integrations/web-app' },
-          { text: 'Email Addon', link: '/integrations/email-addon' },
-        ],
-      },
-      {
         text: 'Repositories',
         items: [
           { text: 'Overview', link: '/repos/overview' },
@@ -60,6 +52,10 @@ export default defineConfig({
             collapsed: false,
             items: [
               { text: 'postguard', link: '/repos/postguard' },
+              { text: 'postguard-website', link: '/repos/postguard-website' },
+              { text: 'cryptify', link: '/repos/cryptify' },
+              { text: 'postguard-tb-addon', link: '/repos/postguard-tb-addon' },
+              { text: 'postguard-outlook-addon', link: '/repos/postguard-outlook-addon' },
             ],
           },
           {
@@ -73,24 +69,11 @@ export default defineConfig({
             ],
           },
           {
-            text: 'Applications',
+            text: 'postguard-examples',
             collapsed: false,
             items: [
-              { text: 'postguard-website', link: '/repos/postguard-website' },
-              { text: 'postguard-tb-addon', link: '/repos/postguard-tb-addon' },
-              { text: 'postguard-outlook-addon', link: '/repos/postguard-outlook-addon' },
-              { text: 'cryptify', link: '/repos/cryptify' },
-              { text: 'postguard-fallback', link: '/repos/postguard-fallback' },
-            ],
-          },
-          {
-            text: 'Examples & Docs',
-            collapsed: false,
-            items: [
-              { text: 'postguard-examples', link: '/repos/postguard-examples' },
-              { text: 'pg-example', link: '/repos/pg-example' },
-              { text: 'pdf-signature', link: '/repos/pdf-signature' },
-              { text: 'postguard-docs', link: '/repos/postguard-docs' },
+              { text: 'pg-sveltekit', link: '/repos/pg-sveltekit' },
+              { text: 'pg-dotnet', link: '/repos/pg-dotnet' },
             ],
           },
         ],
