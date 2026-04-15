@@ -28,7 +28,11 @@ The `website/` directory contains a Docusaurus site deployed to GitHub Pages via
 
 PostGuard uses Identity-Based Encryption (IBE). Instead of public keys, the sender only needs the master public key and the recipient's identity (e.g. email address). To decrypt, the recipient proves their identity to the PKG via [Yivi](https://yivi.app) and receives a decryption key.
 
-A typical session:
+A typical session (red actions require user interaction, all others are automatic):
+
+<p align="center">
+  <img src="/postguard-flow.png" alt="PostGuard session flow"/>
+</p>
 
 0. The PKG generates a master key pair.
 1. The sender's client fetches the public master key from the PKG.
