@@ -68,6 +68,7 @@ export default defineConfig({
             items: [
               { text: 'postguard', link: '/repos/postguard' },
               { text: 'postguard-website', link: '/repos/postguard-website' },
+              { text: 'postguard-business', link: '/repos/postguard-business' },
               { text: 'cryptify', link: '/repos/cryptify' },
               { text: 'postguard-tb-addon', link: '/repos/postguard-tb-addon' },
               { text: 'postguard-outlook-addon', link: '/repos/postguard-outlook-addon' },
