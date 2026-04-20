@@ -84,32 +84,23 @@ The sections below break down the encryption and decryption steps in more detail
 
 Here is what happens when a sender encrypts data:
 
-```
-Sender Application                    PKG Server
-       |                                   |
-       |  1. GET /v2/parameters            |
-       |---------------------------------->|
-       |  <- Master Public Key (MPK)       |
-       |<----------------------------------|
-       |                                   |
-       |  2. POST /v2/irma/sign/key        |
-       |  (with API key or Yivi JWT)       |
-       |---------------------------------->|
-       |  <- Signing keys (pub + priv)     |
-       |<----------------------------------|
-       |                                   |
-       |  3. Build encryption policy       |
-       |  (recipient email + timestamp)    |
-       |                                   |
-       |  4. Seal data                     |
-       |  MPK + policy + signing keys      |
-       |  --> encrypted ciphertext         |
-       |                                   |
-       |                          Cryptify (optional)
-       |  5. Upload ciphertext             |
-       |---------------------------------->|
-       |  <- UUID                          |
-       |<----------------------------------|
+```mermaid
+sequenceDiagram
+  participant Sender as Sender Application
+  participant PKG as PKG Server
+  participant Cryptify as Cryptify (optional)
+
+  Sender->>PKG: 1. GET /v2/parameters
+  PKG-->>Sender: Master Public Key (MPK)
+
+  Sender->>PKG: 2. POST /v2/irma/sign/key (with API key or Yivi JWT)
+  PKG-->>Sender: Signing keys (pub + priv)
+
+  Note over Sender: 3. Build encryption policy<br/>(recipient email + timestamp)
+  Note over Sender: 4. Seal data<br/>MPK + policy + signing keys<br/>→ encrypted ciphertext
+
+  Sender->>Cryptify: 5. Upload ciphertext
+  Cryptify-->>Sender: UUID
 ```
 
 Step by step:
@@ -124,47 +115,28 @@ Step by step:
 
 Here is what happens when a recipient decrypts:
 
-```
-Recipient App         PKG Server         Yivi App (phone)
-      |                    |                     |
-      |  1. Download       |                     |
-      |  ciphertext        |                     |
-      |  (from Cryptify    |                     |
-      |   or other source) |                     |
-      |                    |                     |
-      |  2. Parse header   |                     |
-      |  (extract policy   |                     |
-      |   + timestamp)     |                     |
-      |                    |                     |
-      |  3. POST /v2/request/start               |
-      |  (attribute disclosure request)          |
-      |------------------->|                     |
-      |  <- session data   |                     |
-      |<-------------------|                     |
-      |                    |                     |
-      |  4. Display QR code                      |
-      |  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~> |
-      |                    |  5. User scans QR   |
-      |                    |  and approves        |
-      |                    |<--------------------|
-      |                    |  (cryptographic      |
-      |                    |   proof of identity) |
-      |                    |                     |
-      |  6. GET /v2/request/jwt/{token}          |
-      |------------------->|                     |
-      |  <- JWT (proof)    |                     |
-      |<-------------------|                     |
-      |                    |                     |
-      |  7. GET /v2/irma/key/{timestamp}         |
-      |  (Authorization: Bearer <jwt>)           |
-      |------------------->|                     |
-      |  <- User Secret    |                     |
-      |     Key (USK)      |                     |
-      |<-------------------|                     |
-      |                    |                     |
-      |  8. Unseal data    |                     |
-      |  USK + ciphertext  |                     |
-      |  --> plaintext     |                     |
+```mermaid
+sequenceDiagram
+  participant Recipient as Recipient App
+  participant PKG as PKG Server
+  participant Yivi as Yivi App (phone)
+
+  Note over Recipient: 1. Download ciphertext<br/>(from Cryptify or other source)
+  Note over Recipient: 2. Parse header<br/>(extract policy + timestamp)
+
+  Recipient->>PKG: 3. POST /v2/request/start (attribute disclosure request)
+  PKG-->>Recipient: Session data
+
+  Recipient->>Yivi: 4. Display QR code
+  Yivi->>PKG: 5. User scans QR and approves (cryptographic proof of identity)
+
+  Recipient->>PKG: 6. GET /v2/request/jwt/{token}
+  PKG-->>Recipient: JWT (proof)
+
+  Recipient->>PKG: 7. GET /v2/irma/key/{timestamp} (Authorization: Bearer jwt)
+  PKG-->>Recipient: User Secret Key (USK)
+
+  Note over Recipient: 8. Unseal data<br/>USK + ciphertext → plaintext
 ```
 
 Step by step:
