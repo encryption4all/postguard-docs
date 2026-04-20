@@ -1,29 +1,24 @@
 # cryptify
 
-[GitHub](https://github.com/encryption4all/cryptify) · Rust + TypeScript · File Sharing Service
+[GitHub](https://github.com/encryption4all/cryptify) · Rust · File Sharing Service
 
 Cryptify is the file encryption and sharing service that PostGuard uses for delivering encrypted files. It allows encrypting any file with an identity attribute. Only people who can prove they have that attribute can decrypt and view the contents.
 
 The [PostGuard website](/repos/postguard-website) and the [JavaScript SDK](/repos/postguard-js) use Cryptify as the default file storage and delivery backend.
 
-## Architecture
-
-Cryptify has two parts:
-
-- **Backend** (Rust, Rocket framework): Handles file storage, chunked uploads, email notifications, and serves the API.
-- **Frontend** (TypeScript): Web UI for uploading and downloading encrypted files.
+Cryptify is a Rust service built on the Rocket framework. It handles file storage, chunked uploads, email notifications, and serves the API.
 
 ## Configuration
 
-The backend reads its configuration from a TOML file. Example configuration files are in `conf/`. Set the `ROCKET_CONFIG` environment variable to point to the configuration file.
+Cryptify reads its configuration from a TOML file. Example configuration files are in `conf/`. Set the `ROCKET_CONFIG` environment variable to point to the configuration file.
 
 Configuration parameters:
 
 | Parameter | Description | Example |
 |---|---|---|
-| `server_url` | Public URL of the frontend (via nginx) | `http://localhost:8080/` |
+| `server_url` | Public URL of the service | `http://localhost:8080/` |
 | `address` | Bind address | `0.0.0.0` |
-| `port` | Backend listen port | `8000` |
+| `port` | Listen port | `8000` |
 | `data_dir` | Directory for storing uploaded files | `/tmp/data` |
 | `email_from` | Sender address for notification emails | `noreply@postguard.local` |
 | `smtp_url` | SMTP server hostname | `mailcrab` |
@@ -36,7 +31,7 @@ Configuration parameters:
 
 ## API
 
-The backend exposes a file upload/download API. An OpenAPI 3.0 specification is available in `api-description.yaml` in the repository root. The main endpoints:
+Cryptify exposes a file upload/download API. An OpenAPI 3.0 specification is available in `api-description.yaml` in the repository root. The main endpoints:
 
 - `POST /fileupload/init` — Initialize a multipart file upload (takes sender email, recipient email, file size, mail content, and language).
 - `PUT /fileupload/{uuid}` — Upload a file chunk (use `Content-Range` header for chunked uploads).
@@ -57,42 +52,9 @@ docker-compose up
 
 ### Manual Setup
 
-#### Frontend
-
-Requires Node.js 14+:
-
-```bash
-cd cryptify-front-end
-npm install
-npm run start    # development server
-npm run build    # production build
-```
-
-When developing locally, change the `baseurl` constant in `FileProvider.ts` to `http://localhost:3000` so the frontend uses the local backend.
-
-#### Backend
-
 Requires Rust.
 
-##### Configuration
-
-The backend needs a configuration file. See `conf/` for examples (`config.toml` for production, `config.dev.toml` for development).
-
-| Option | Description |
-|---|---|
-| `server_url` | Public URL of the service |
-| `address` | Bind address (e.g. `0.0.0.0`) |
-| `data_dir` | Directory for file storage |
-| `email_from` | Sender address for email notifications |
-| `smtp_url` | SMTP server hostname |
-| `smtp_port` | SMTP server port |
-| `smtp_tls` | Enable TLS for SMTP (default: `false`) |
-| `smtp_username` | SMTP username (optional) |
-| `smtp_password` | SMTP password (optional) |
-| `allowed_origins` | CORS allowed origins (regex) |
-| `pkg_url` | PostGuard PKG server URL |
-
-##### Building and running
+#### Building and running
 
 ```bash
 # Development (with auto-reload)
@@ -102,16 +64,7 @@ env ROCKET_ENV=development ROCKET_CONFIG=conf/config.dev.toml cargo watch -x run
 env ROCKET_ENV=production cargo build --release
 
 # Run the built binary
-env ROCKET_CONFIG=conf/config.toml ./target/release/cryptify-backend
-```
-
-### Electron Packaging
-
-Cryptify can also be packaged as a desktop app:
-
-```bash
-cd cryptify-front-end
-npm run dist-electron
+env ROCKET_CONFIG=conf/config.toml ./target/release/cryptify
 ```
 
 ## Releasing
