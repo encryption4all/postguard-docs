@@ -20,6 +20,7 @@ The main PostGuard codebase and applications.
 |---|---|---|
 | [postguard](/repos/postguard) | Rust | Core library, PKG server, WASM bindings, CLI, FFI bindings |
 | [postguard-website](/repos/postguard-website) | SvelteKit | Web frontend for encrypting and sending files |
+| [postguard-business](/repos/postguard-business) | SvelteKit | Business portal for organization and API key management |
 | [cryptify](/repos/cryptify) | Rust + TypeScript | File encryption and sharing service (backend + frontend) |
 | [postguard-tb-addon](/repos/postguard-tb-addon) | TypeScript | Thunderbird email encryption extension |
 | [postguard-outlook-addon](/repos/postguard-outlook-addon) | TypeScript | Outlook email encryption add-in |
