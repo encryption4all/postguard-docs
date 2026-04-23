@@ -94,9 +94,9 @@ adb reverse tcp:8080 tcp:8080   # PostGuard website
 |---|---|---|
 | `VITE_FILEHOST_URL` | `http://localhost:8000` | Cryptify file hosting service URL |
 | `VITE_PKG_URL` | `http://localhost:8087` | PKG service URL |
-| `VITE_MAX_UPLOAD_SIZE` | — | Maximum file upload size in bytes |
-| `VITE_UPLOAD_CHUNK_SIZE` | — | Upload chunk size in bytes |
-| `VITE_FILEREAD_CHUNK_SIZE` | — | File read chunk size in bytes |
+| `VITE_MAX_UPLOAD_SIZE` | none | Maximum file upload size in bytes |
+| `VITE_UPLOAD_CHUNK_SIZE` | none | Upload chunk size in bytes |
+| `VITE_FILEREAD_CHUNK_SIZE` | none | File read chunk size in bytes |
 
 ## Releasing
 

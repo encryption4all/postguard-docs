@@ -33,10 +33,10 @@ Configuration parameters:
 
 Cryptify exposes a file upload/download API. An OpenAPI 3.0 specification is available in `api-description.yaml` in the repository root. The main endpoints:
 
-- `POST /fileupload/init` — Initialize a multipart file upload (takes sender email, recipient email, file size, mail content, and language).
-- `PUT /fileupload/{uuid}` — Upload a file chunk (use `Content-Range` header for chunked uploads).
-- `POST /fileupload/finalize/{uuid}` — Finalize the upload and send the notification email.
-- `GET /filedownload/{uuid}` — Download a file.
+- `POST /fileupload/init`: Initialize a multipart file upload (takes sender email, recipient email, file size, mail content, and language).
+- `PUT /fileupload/{uuid}`: Upload a file chunk (use `Content-Range` header for chunked uploads).
+- `POST /fileupload/finalize/{uuid}`: Finalize the upload and send the notification email.
+- `GET /filedownload/{uuid}`: Download a file.
 
 ## Development
 
