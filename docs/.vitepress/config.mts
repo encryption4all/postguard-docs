@@ -1,6 +1,7 @@
 import { defineConfig } from 'vitepress'
+import { withMermaid } from 'vitepress-plugin-mermaid'
 
-export default defineConfig({
+export default withMermaid(defineConfig({
   title: 'PostGuard',
   description: 'End-to-end encryption using identity-based encryption and Yivi',
   head: [['link', { rel: 'icon', href: '/pg_logo_no_text.svg' }]],
@@ -98,4 +99,4 @@ export default defineConfig({
       { icon: 'github', link: 'https://github.com/encryption4all' },
     ],
   },
-})
+}))
