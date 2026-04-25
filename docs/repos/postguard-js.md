@@ -72,6 +72,18 @@ const { uuid } = await sealed.upload({
 });
 ```
 
+The size of each chunk sent to Cryptify is configurable via `uploadChunkSize` on the `PostGuard` constructor. The default is 5 000 000 bytes (5 MB), matching the `chunk_size` default in [Cryptify](/repos/cryptify#configuration). Override only if the Cryptify deployment has been reconfigured to accept a different chunk size.
+
+```ts
+const pg = new PostGuard({
+  pkgUrl: 'https://pkg.staging.yivi.app',
+  cryptifyUrl: 'https://fileshare.staging.yivi.app',
+  uploadChunkSize: 10_000_000, // 10 MB chunks
+});
+```
+
+<small>[Source: src/types.ts](https://github.com/encryption4all/postguard-js/blob/33bede4cd1389bc729dca75ad071eb7bf47cd3f1/src/types.ts)</small>
+
 ### Encrypt raw data (no upload)
 
 For email clients and custom integrations that handle their own transport:

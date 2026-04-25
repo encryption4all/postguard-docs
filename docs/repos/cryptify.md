@@ -28,6 +28,12 @@ Configuration parameters:
 | `smtp_password` | Optional SMTP password | `pw` |
 | `allowed_origins` | Regex pattern for CORS allowed origins | `^https?://(localhost\|127\\.0\\.0\\.1)(:[0-9]+)?$` |
 | `pkg_url` | URL of the PostGuard PKG server | `http://postguard-pkg:8087` |
+| `chunk_size` | Maximum size in bytes of a single upload chunk. Defaults to `5000000` (5 MB) | `5000000` |
+| `usage_db` | Path to the SQLite database used for upload usage accounting | `/app/data/usage.db` |
+
+The `chunk_size` setting caps the size of each `PUT /fileupload/{uuid}` body. Clients (such as `@e4a/pg-js` and the PostGuard website) use the same value for their upload chunks, so increasing it server-side without updating the client default will not produce larger chunks on its own.
+
+<small>[Source: src/config.rs](https://github.com/encryption4all/cryptify/blob/a31dbf1bdff1d2a8776a15a1581f3d48c89f4f9d/src/config.rs)</small>
 
 ## API
 
