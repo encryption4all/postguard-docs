@@ -2,8 +2,8 @@
 
 PostGuard provides two official SDKs for identity-based encryption:
 
-- **@e4a/pg-js** — JavaScript/TypeScript SDK for browsers and Node.js
-- **E4A.PostGuard** — .NET SDK for server-side applications
+- **@e4a/pg-js**: JavaScript/TypeScript SDK for browsers and Node.js
+- **E4A.PostGuard**: .NET SDK for server-side applications
 
 Both SDKs use the same lazy builder pattern: calling `encrypt()` returns a builder that captures parameters but does no work until you call a terminal method like `upload()` or `toBytes()`.
 

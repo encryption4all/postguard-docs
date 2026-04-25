@@ -6,8 +6,8 @@ A .NET console application demonstrating the [postguard-dotnet](/repos/postguard
 
 It shows two patterns:
 
-1. **Encrypt and Upload** — Encrypts sample files for a citizen (exact email) and an organisation (email domain), uploads to Cryptify, and returns a UUID for custom distribution.
-2. **Encrypt and Deliver** — Same as above, but also sends an email notification to the recipient via Cryptify.
+1. **Encrypt and Upload**: Encrypts sample files for a citizen (exact email) and an organisation (email domain), uploads to Cryptify, and returns a UUID for custom distribution.
+2. **Encrypt and Deliver**: Same as above, but also sends an email notification to the recipient via Cryptify.
 
 ## Prerequisites
 
@@ -67,7 +67,7 @@ var sealed = pg.Encrypt(new EncryptInput
     Sign = pg.Sign.ApiKey(apiKey)
 });
 
-// Upload only — returns UUID for custom delivery
+// Upload only: returns UUID for custom delivery
 var result = await sealed.UploadAsync();
 
 // Or upload + send email notification

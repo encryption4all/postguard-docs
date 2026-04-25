@@ -84,7 +84,7 @@ const sealed = pg.encrypt({
 });
 
 const encrypted = await sealed.toBytes();
-// encrypted is a Uint8Array — attach it, send it, store it however you want
+// encrypted is a Uint8Array: attach it, send it, store it however you want
 ```
 
 ## Decryption

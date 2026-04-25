@@ -28,7 +28,7 @@ var sealed = pg.Encrypt(new EncryptInput
     Sign = pg.Sign.ApiKey("PG-API-xxx")
 });
 
-// Upload only — returns UUID for custom email distribution
+// Upload only: returns UUID for custom email distribution
 var result = await sealed.UploadAsync();
 Console.WriteLine(result.Uuid);
 

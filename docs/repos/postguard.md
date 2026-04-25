@@ -141,8 +141,8 @@ cargo run --release --bin pg-pkg server \
 | Variable | Description | Default |
 |---|---|---|
 | `IRMA_SERVER` | Yivi/IRMA server URL | `https://is.yivi.app` |
-| `DATABASE_URL` | PostgreSQL connection string | — |
-| `RUST_LOG` | Log level (`debug`, `info`, `warn`, `error`) | — |
+| `DATABASE_URL` | PostgreSQL connection string | none |
+| `RUST_LOG` | Log level (`debug`, `info`, `warn`, `error`) | none |
 
 ### Running the PKG Server
 
