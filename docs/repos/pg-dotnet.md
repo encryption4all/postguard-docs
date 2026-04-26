@@ -35,7 +35,7 @@ cd ../postguard/pg-ffi && ./build.sh
 Set your API key and run:
 
 ```bash
-export PG_API_KEY="PG-API-your-key-here"
+export PG_API_KEY="PG-your-key-here"
 cd pg-dotnet
 dotnet run
 ```

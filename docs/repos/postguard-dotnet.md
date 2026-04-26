@@ -25,7 +25,7 @@ var sealed = pg.Encrypt(new EncryptInput
         pg.Recipient.Email("citizen@example.com"),
         pg.Recipient.EmailDomain("info@org.nl")
     ],
-    Sign = pg.Sign.ApiKey("PG-API-xxx")
+    Sign = pg.Sign.ApiKey("PG-xxx")
 });
 
 // Upload only: returns UUID for custom email distribution
