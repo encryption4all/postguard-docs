@@ -142,6 +142,7 @@ cargo run --release --bin pg-pkg server \
 |---|---|---|
 | `IRMA_SERVER` | Yivi/IRMA server URL | `https://is.yivi.app` |
 | `DATABASE_URL` | PostgreSQL connection string | none |
+| `PKG_ALLOWED_ORIGINS` | Comma-separated CORS allowlist (e.g. `https://postguard.eu,https://postguard.nl`). `*` keeps the legacy any-origin behaviour and logs a warning at startup. Also available as `--allowed-origins`. | `*` |
 | `RUST_LOG` | Log level (`debug`, `info`, `warn`, `error`) | none |
 
 ### Running the PKG Server
