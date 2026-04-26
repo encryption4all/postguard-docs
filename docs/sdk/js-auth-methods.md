@@ -12,7 +12,7 @@ PostGuard requires the sender to prove their identity before encrypting. The SDK
 
 ## API Key
 
-Uses a pre-shared API key (prefixed with `PG-API-`) to authenticate with the PKG. Suitable for server-side applications or trusted client environments where you don't need interactive identity verification.
+Uses a pre-shared API key (prefixed with `PG-`) to authenticate with the PKG. Keys are issued by the [postguard-business](/repos/postguard-business) portal. Suitable for server-side applications or trusted client environments where you don't need interactive identity verification.
 
 The SvelteKit example uses an API key for encryption:
 

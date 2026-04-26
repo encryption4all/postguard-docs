@@ -230,7 +230,7 @@ Start a Yivi session with a request body like:
 | Method | Endpoint | Description |
 |---|---|---|
 | `GET` | `/v2/irma/key/{timestamp}` | Retrieve a User Secret Key (USK). Requires `Authorization: Bearer <jwt>`. |
-| `POST` | `/v2/irma/sign/key` | Retrieve signing keys. Authenticate with a Yivi JWT or API key (`PG-API-<key>`). |
+| `POST` | `/v2/irma/sign/key` | Retrieve signing keys. Authenticate with a Yivi JWT or API key (`PG-<key>`). |
 
 Request body for signing keys:
 
@@ -257,7 +257,7 @@ Request body for signing keys:
 The PKG supports two authentication methods:
 
 - **JWT (Yivi Sessions)**: After a Yivi disclosure, the IRMA server issues a JWT. Pass it as `Authorization: Bearer <jwt>`.
-- **API Keys**: For server-to-server use, API keys bypass interactive Yivi sessions. Pass as `Authorization: PG-API-<key>`. Keys are stored in PostgreSQL with pre-configured attributes.
+- **API Keys**: For server-to-server use, API keys bypass interactive Yivi sessions. Pass as `Authorization: Bearer PG-<key>`. Keys are issued by [postguard-business](/repos/postguard-business) and stored in its `business_api_keys` table; the PKG looks them up by SHA-256 hash on each request.
 
 For the full API details with request/response examples, see the [architecture page](/guide/architecture#api-endpoints).
 

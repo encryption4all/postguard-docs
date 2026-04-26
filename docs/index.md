@@ -51,7 +51,7 @@ const pg = new PostGuard({
 const sealed = pg.encrypt({
   files: [file1, file2],
   recipients: [pg.recipient.email('alice@example.com')],
-  sign: pg.sign.apiKey('PG-API-your-key')
+  sign: pg.sign.apiKey('PG-your-key')
 });
 
 await sealed.upload({ notify: { message: 'Here are your files' } });

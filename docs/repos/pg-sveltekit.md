@@ -44,7 +44,7 @@ PUBLIC_CRYPTIFY_URL=https://fileshare.staging.yivi.app
 PUBLIC_APP_NAME=PostGuard for Business Example
 
 # Server-only
-PG_API_KEY=PG-API-your-key-here
+PG_API_KEY=PG-your-key-here
 ```
 
 <small>[Source: .env.example](https://github.com/encryption4all/postguard-examples/blob/d6c7f01d3cb63d84e94b1e59079b0d80d748d23b/pg-sveltekit/.env.example)</small>
