@@ -67,6 +67,12 @@ The seed script creates accounts that work with `irma-demo` attributes:
 
 Admin login is at `/auth/login/admin`. Org login is at `/auth/login`. Override the admin credentials by setting `ADMIN_EMAIL`, `ADMIN_FULL_NAME`, and `ADMIN_PHONE` in `.env`.
 
+### Site URL
+
+`PUBLIC_SITE_URL` is the public origin of the deployment. It is used to build canonical tags, the Open Graph image URL, JSON-LD structured data, and the sitemap. Local default is `http://localhost:5173`; staging and production set it to the deployed origin via `postguard-ops`.
+
+<small>[Source: .env.example](https://github.com/encryption4all/postguard-business/blob/e5b41a58f603cdae0d066f9e4b8c1c779ae6637e/.env.example)</small>
+
 ## Feature flags
 
 Every feature is toggleable via an environment variable. In development mode, flags can also be toggled at runtime from the admin settings page.
