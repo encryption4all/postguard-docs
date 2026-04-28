@@ -37,7 +37,7 @@ const pg = new PostGuard({
 const sealed = pg.encrypt({
   files: fileList,
   recipients: [pg.recipient.email('bob@example.com')],
-  sign: pg.sign.apiKey('PG-API-your-key'),
+  sign: pg.sign.apiKey('PG-your-key'),
 });
 
 const { uuid } = await sealed.upload();
@@ -110,7 +110,7 @@ var sealed = pg.Encrypt(new EncryptInput
 {
     Files = [new PgFile("report.txt", fileStream)],
     Recipients = [pg.Recipient.Email("bob@example.com")],
-    Sign = pg.Sign.ApiKey("PG-API-your-key")
+    Sign = pg.Sign.ApiKey("PG-your-key")
 });
 
 var result = await sealed.UploadAsync();

@@ -177,7 +177,7 @@ Both encryption and decryption support streaming (`ReadableStream`/`WritableStre
 | Method | Endpoint | Description |
 |---|---|---|
 | `GET` | `/v2/irma/key/{timestamp}` | Retrieve a User Secret Key (USK). Requires `Authorization: Bearer <jwt>`. The timestamp must match the one embedded in the ciphertext. |
-| `POST` | `/v2/irma/sign/key` | Retrieve signing keys. Authenticate with either an API key (`Bearer PG-API-...`) or a Yivi JWT. |
+| `POST` | `/v2/irma/sign/key` | Retrieve signing keys. Authenticate with either an API key (`Bearer PG-...`) or a Yivi JWT. |
 
 #### Health
 
@@ -187,7 +187,7 @@ Both encryption and decryption support streaming (`ReadableStream`/`WritableStre
 | `GET` | `/metrics` | Prometheus metrics endpoint. |
 
 ::: warning Authentication
-The key issuance endpoints require a valid `Authorization: Bearer <jwt>` header. The JWT is obtained through a completed Yivi session (for end-users) or provided as an API key prefixed with `PG-API-` (for server-to-server use).
+The key issuance endpoints require a valid `Authorization: Bearer <jwt>` header. The JWT is obtained through a completed Yivi session (for end-users) or provided as an API key prefixed with `PG-` (for server-to-server use).
 :::
 
 ### Cryptify Server

@@ -37,7 +37,7 @@ var sealed = pg.Encrypt(new EncryptInput
         pg.Recipient.Email("citizen@example.com"),
         pg.Recipient.EmailDomain("info@org.nl")
     ],
-    Sign = pg.Sign.ApiKey("PG-API-your-key")
+    Sign = pg.Sign.ApiKey("PG-your-key")
 });
 ```
 
@@ -95,7 +95,7 @@ pg.Recipient.Email("alice@example.com")
 The .NET SDK supports API key signing only. API keys bypass interactive Yivi sessions and are intended for server-to-server use.
 
 ```csharp
-pg.Sign.ApiKey("PG-API-your-key")
+pg.Sign.ApiKey("PG-your-key")
 ```
 
 ## Raw Bytes (No Upload)
