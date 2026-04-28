@@ -35,6 +35,36 @@ The `chunk_size` setting caps the size of each `PUT /fileupload/{uuid}` body. Cl
 
 <small>[Source: src/config.rs](https://github.com/encryption4all/cryptify/blob/a31dbf1bdff1d2a8776a15a1581f3d48c89f4f9d/src/config.rs)</small>
 
+## Upload limits
+
+Cryptify enforces three independent limits on every upload. They are constants in `src/store.rs`, not config options.
+
+| Limit | Anonymous senders | API-key senders | Notes |
+|---|---|---|---|
+| Per-chunk size | `chunk_size` from config (default 5 MB) | same as anonymous | Bigger chunks are rejected with `400 Bad Request`. |
+| Per-upload size | 5 GB | 100 GB | Total bytes for a single upload session. |
+| Rolling window total | 5 GB per 14 days | 100 GB per 14 days | Sum of all uploads from the same sender email in the trailing 14 days. |
+
+A sender is identified by the email attribute disclosed in the encrypted envelope's signature. The rolling window only counts finalized uploads.
+
+When a request would push the sender over the per-upload or the rolling-window limit, the server responds with `413 Payload Too Large` and a JSON body:
+
+```json
+{
+  "error": "Sender has exceeded the 14-day rolling limit of 5000000000 bytes",
+  "limit": "rolling_window",
+  "used_bytes": 4800000000,
+  "limit_bytes": 5000000000,
+  "resets_at": "2026-05-09T12:34:56Z"
+}
+```
+
+`limit` is either `"per_upload"` or `"rolling_window"`. `resets_at` is an RFC 3339 timestamp for when the oldest counted upload expires from the rolling window. It is `null` for `per_upload` rejections, since the per-upload limit does not reset.
+
+`GET /usage` returns the current state for the authenticated sender, including `used_bytes`, `limit_bytes`, `per_upload_limit_bytes`, `window_days`, and `resets_at`.
+
+<small>[Source: src/store.rs#L11-L15](https://github.com/encryption4all/cryptify/blob/58883a86b369af08d92db93aa1025f9eba3c73eb/src/store.rs#L11-L15)</small>
+
 ## API
 
 Cryptify exposes a file upload/download API. An OpenAPI 3.0 specification is available in `api-description.yaml` in the repository root. The main endpoints:
