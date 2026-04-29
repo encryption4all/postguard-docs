@@ -121,7 +121,7 @@ export const load: PageServerLoad = async () => {
 };
 ```
 
-<small>[Source: +page.server.ts](https://github.com/encryption4all/postguard-examples/blob/d6c7f01d3cb63d84e94b1e59079b0d80d748d23b/pg-sveltekit/src/routes/send/+page.server.ts)</small>
+<small>[Source: +page.server.ts](https://github.com/encryption4all/postguard-examples/blob/2b29c1ba18/pg-sveltekit/src/routes/send/+page.server.ts)</small>
 
 The send page uses Svelte 5 reactive state to track progress and handle errors:
 
@@ -156,52 +156,11 @@ async function handleSend() {
 }
 ```
 
-<small>[Source: +page.svelte#L36-L65](https://github.com/encryption4all/postguard-examples/blob/d6c7f01d3cb63d84e94b1e59079b0d80d748d23b/pg-sveltekit/src/routes/send/+page.svelte#L36-L65)</small>
+<small>[Source: +page.svelte#L36-L65](https://github.com/encryption4all/postguard-examples/blob/2b29c1ba18/pg-sveltekit/src/routes/send/+page.svelte#L36-L65)</small>
 
 ## Decrypt Files
 
-A page that decrypts files from a Cryptify UUID. The UUID and recipient can come from URL query parameters (as provided in Cryptify notification emails):
-
-```ts
-import { PostGuard, IdentityMismatchError } from '@e4a/pg-js';
-import type { DecryptFileResult } from '@e4a/pg-js';
-import { PKG_URL, CRYPTIFY_URL } from '$lib/config';
-
-const pg = new PostGuard({ pkgUrl: PKG_URL, cryptifyUrl: CRYPTIFY_URL });
-
-async function startDecrypt() {
-  if (!uuid) {
-    uuid = manualUuid;
-    if (!uuid) return;
-  }
-
-  dlState = 'ready';
-  await tick();
-
-  try {
-    const opened = pg.open({ uuid });
-    const decrypted = await opened.decrypt({
-      element: '#yivi-web',
-      recipient: recipientParam || undefined
-    });
-
-    result = decrypted as DecryptFileResult;
-    senderEmail = result.sender?.email ?? '';
-    dlState = 'done';
-
-    result.download();
-  } catch (e) {
-    if (e instanceof IdentityMismatchError) {
-      dlState = 'identity-mismatch';
-    } else {
-      errorMessage = e instanceof Error ? e.message : String(e);
-      dlState = 'error';
-    }
-  }
-}
-```
-
-<small>[Source: +page.svelte#L4-L63](https://github.com/encryption4all/postguard-examples/blob/d6c7f01d3cb63d84e94b1e59079b0d80d748d23b/pg-sveltekit/src/routes/download/+page.svelte#L4-L63)</small>
+A page decrypts files from a Cryptify UUID. The UUID and recipient come from URL query parameters (as provided in Cryptify notification emails). The page reads the parameters on mount, opens a Yivi QR widget for identity verification, and auto-downloads the decrypted files. See the [JS SDK Decryption guide](/sdk/js-decryption) for the API used.
 
 The template renders a Yivi QR container that the SDK populates:
 

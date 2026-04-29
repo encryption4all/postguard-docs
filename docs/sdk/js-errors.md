@@ -65,34 +65,10 @@ Thrown when:
 
 A subclass of `DecryptionError`. Thrown when the Yivi attributes proven by the user do not match the encryption policy embedded in the ciphertext. For example, the message was encrypted for `alice@example.com` but the user proved `bob@example.com`.
 
-## Usage example
-
-The SvelteKit download page handles decryption errors:
-
-```ts
-try {
-  const opened = pg.open({ uuid });
-  const decrypted = await opened.decrypt({
-    element: '#yivi-web',
-    recipient: recipientParam || undefined
-  });
-
-  result = decrypted as DecryptFileResult;
-  senderEmail = result.sender?.email ?? '';
-  dlState = 'done';
-  result.download();
-} catch (e) {
-  if (e instanceof IdentityMismatchError) {
-    dlState = 'identity-mismatch';
-  } else {
-    errorMessage = e instanceof Error ? e.message : String(e);
-    dlState = 'error';
-  }
-}
-```
-
-<small>[Source: +page.svelte#L44-L63](https://github.com/encryption4all/postguard-examples/blob/d6c7f01d3cb63d84e94b1e59079b0d80d748d23b/pg-sveltekit/src/routes/download/+page.svelte#L44-L63)</small>
+## Handling order
 
 ::: tip
 Always check for the most specific error first (`IdentityMismatchError`) and work up to the most general (`PostGuardError`), since they form an inheritance chain.
 :::
+
+In a `try`/`catch` around `opened.decrypt()`, branch on `IdentityMismatchError` first (to show a "wrong recipient" message), then fall through to a generic error branch that reads `e.message` for anything else.

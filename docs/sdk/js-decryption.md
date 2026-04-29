@@ -25,23 +25,7 @@ The unsealer is cached after `inspect()`, so a following `decrypt()` reuses it w
 
 ## Decrypt from Cryptify UUID
 
-The SvelteKit example reads the UUID from a URL query parameter, opens a Yivi QR widget for identity verification, and auto-downloads the decrypted files:
-
-```ts
-const opened = pg.open({ uuid });
-const decrypted = await opened.decrypt({
-  element: '#yivi-web',
-  recipient: recipientParam || undefined
-});
-
-result = decrypted as DecryptFileResult;
-senderEmail = result.sender?.email ?? '';
-
-// Auto-download
-result.download();
-```
-
-<small>[Source: +page.svelte#L47-L56](https://github.com/encryption4all/postguard-examples/blob/d6c7f01d3cb63d84e94b1e59079b0d80d748d23b/pg-sveltekit/src/routes/download/+page.svelte#L47-L56)</small>
+Pass `{ uuid }` to `pg.open()`, then call `decrypt()` with `element` (a CSS selector for the Yivi QR container) and an optional `recipient`. The result is a `DecryptFileResult` with a `download()` helper that triggers a browser download.
 
 ::: warning
 Requires `cryptifyUrl` to be set in the constructor.
@@ -127,26 +111,6 @@ Decryption can throw:
 - `IdentityMismatchError`: the Yivi attributes did not match the encryption policy
 - `NetworkError`: PKG or Cryptify communication failure
 
-The SvelteKit download page handles these:
-
-```ts
-try {
-  const opened = pg.open({ uuid });
-  const decrypted = await opened.decrypt({
-    element: '#yivi-web',
-    recipient: recipientParam || undefined
-  });
-  // success
-} catch (e) {
-  if (e instanceof IdentityMismatchError) {
-    dlState = 'identity-mismatch';
-  } else {
-    errorMessage = e instanceof Error ? e.message : String(e);
-    dlState = 'error';
-  }
-}
-```
-
-<small>[Source: +page.svelte#L44-L63](https://github.com/encryption4all/postguard-examples/blob/d6c7f01d3cb63d84e94b1e59079b0d80d748d23b/pg-sveltekit/src/routes/download/+page.svelte#L44-L63)</small>
+Catch `IdentityMismatchError` first to show a recipient-mismatch message, then fall through to a generic error branch for everything else.
 
 See [Error Handling](/sdk/js-errors) for the full error reference.
