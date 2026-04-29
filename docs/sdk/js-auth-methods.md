@@ -45,17 +45,7 @@ API keys are part of PostGuard for Business. Contact your PKG administrator to o
 
 Runs an interactive Yivi session directly in the browser. The SDK renders a QR code (or app link on mobile) in the specified DOM element. The user scans it with the Yivi app to prove their email address.
 
-The SvelteKit download page uses `element` for Yivi-based decryption:
-
-```ts
-const opened = pg.open({ uuid });
-const decrypted = await opened.decrypt({
-  element: '#yivi-web',
-  recipient: recipientParam || undefined
-});
-```
-
-<small>[Source: +page.svelte#L47-L51](https://github.com/encryption4all/postguard-examples/blob/d6c7f01d3cb63d84e94b1e59079b0d80d748d23b/pg-sveltekit/src/routes/download/+page.svelte#L47-L51)</small>
+For decryption in a browser, pass `element` to `opened.decrypt()` with a CSS selector for the Yivi QR container. See [Decryption](/sdk/js-decryption) for the full call shape.
 
 The PostGuard website uses Yivi signing with optional extra attributes and sender encryption:
 
