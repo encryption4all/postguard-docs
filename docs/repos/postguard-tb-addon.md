@@ -177,6 +177,10 @@ async function handleEncrypt(pg: PostGuard, data: EncryptPopupData, windowId: nu
 
 <small>[Source: yivi-popup.ts#L90-L136](https://github.com/encryption4all/postguard-tb-addon/blob/57234eebd32d64bd011086fe89ecdd7ac40fc15d/src/pages/yivi-popup/yivi-popup.ts#L90-L136)</small>
 
+::: warning Tier 3 envelopes have no attachment
+As of `@e4a/pg-js` 0.10, `envelope.attachment` is `File | null` and is `null` for tier 3 envelopes (ciphertext over `PG_MAX_ATTACHMENT_SIZE`, ~10 MB by default). The snippet above dereferences `envelope.attachment.arrayBuffer()` directly, so it works only when the payload falls into tier 1 or tier 2. The addon needs a null branch that skips the `attachmentBase64` field and relies on the Cryptify download link in `envelope.htmlBody` instead. Tracked separately. See [Email Helpers](/sdk/js-email-helpers#createenvelope) for the tier model.
+:::
+
 ### Decrypt Handler
 
 ```ts
