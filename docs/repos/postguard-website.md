@@ -16,6 +16,39 @@ git submodule update --init --recursive
 
 For a step-by-step example of building a web application with PostGuard, see the [pg-sveltekit](/repos/pg-sveltekit) example, which follows the same patterns as this website.
 
+## Recipient URL forms
+
+The `/decrypt` and `/download` pages each accept a different URL shape depending on which envelope tier `pg-js`'s [`createEnvelope()`](/sdk/js-email-helpers#createenvelope) emitted on the sender side.
+
+| Tier | Encryption mode | URL emitted in body | What the page does |
+|------|-----------------|---------------------|--------------------|
+| 1 (small) | any | `/decrypt#<urlsafe-base64>` | Decodes the fragment in-browser, builds a `ReadableStream` of the ciphertext, and runs the inner MIME envelope through the fallback decrypter. |
+| 2/3 | `data` | `/decrypt?uuid=<id>` | Calls `pg.open({ uuid })` to fetch the ciphertext from [Cryptify](/repos/cryptify), decrypts, then parses the inner MIME with postal-mime. |
+| 2/3 | `files` | `/download?uuid=<id>` | Calls `pg.open({ uuid })` to fetch the ciphertext from [Cryptify](/repos/cryptify) and surfaces the contained files for download. |
+
+Both query-string forms accept an optional `?recipient=<key>` hint. When the value matches one of the recipients in the encryption policy, the page skips the recipient picker and authenticates against that key directly.
+
+```ts
+// Path 2: ?uuid=… points at a Cryptify-uploaded ciphertext (tier
+// 2/3 messages from pg-js >= 1.1.0 in `data: mime` mode). The
+// Decrypt component accepts a uuid prop and calls pg.open({ uuid })
+// to fetch + decrypt; the parsed plaintext is treated as RFC 5322
+// MIME, so attachments and the inner body surface by name (matches
+// the receive-side path the Outlook/TB add-ons take).
+const params = new URLSearchParams(window.location.search)
+const uuidParam = params.get('uuid')
+const recipientParam = params.get('recipient')
+if (uuidParam) {
+    uuid = uuidParam
+    recipient = recipientParam ?? undefined
+    hashMode = true
+    unique = {}
+    currRight = RIGHTMODES.Decrypt
+}
+```
+
+<small>[Source: src/routes/(app)/decrypt/+page.svelte#L86-L106](https://github.com/encryption4all/postguard-website/blob/0398c87d113ab7b9fc518f4eb9aaf7059745d54a/src/routes/%28app%29/decrypt/%2Bpage.svelte#L86-L106)</small>
+
 ## Development
 
 ### Quick Start with Docker Compose (recommended)

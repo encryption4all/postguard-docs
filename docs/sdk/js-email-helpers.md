@@ -78,7 +78,15 @@ Takes a `Sealed` encryption builder and wraps the encrypted output into an email
 
 The envelope contains a placeholder HTML body (telling the recipient to use PostGuard to decrypt), a plain text fallback, and the ciphertext as a file attachment named `postguard.encrypted`.
 
-For small payloads (under 100 KB), the encrypted data is also embedded as an armored base64 block in the HTML and as a URL fragment in the decrypt button link. For large payloads, `createEnvelope` automatically uploads to Cryptify and puts a download link in the email instead.
+The body fallback link in the placeholder HTML and plain-text body points at one of three URL shapes on the configured `websiteUrl`, picked from the envelope tier:
+
+| Tier | Encryption mode | URL shape | Notes |
+|------|-----------------|-----------|-------|
+| 1 (small payload) | any | `/decrypt#<urlsafe-base64>` | The full ciphertext rides in the URL fragment. The recipient page decodes it client-side — no Cryptify round-trip. |
+| 2/3 | `data` (MIME) | `/decrypt?uuid=<id>` | The ciphertext was uploaded to [Cryptify](/repos/cryptify); the recipient page calls `pg.open({ uuid })` to fetch and decrypt. |
+| 2/3 | `files` | `/download?uuid=<id>` | Same fetch path as above, but the recipient page surfaces the contained files instead of rendering an inner MIME body. |
+
+An optional `&recipient=<key>` may ride alongside either query-string form. When present and matching one of the policy recipients, the recipient page skips the picker and authenticates against that key directly. The matching parser logic on the recipient side lives in [postguard-website](/repos/postguard-website#recipient-url-forms).
 
 The Thunderbird addon creates the envelope in one call:
 
