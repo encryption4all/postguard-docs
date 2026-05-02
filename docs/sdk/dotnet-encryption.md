@@ -53,27 +53,39 @@ var sealed = pg.Encrypt(new EncryptInput
 
 | Method | Returns | Description |
 |---|---|---|
-| `UploadAsync(ct?)` | `UploadResult` | Encrypt and upload to Cryptify. Returns UUID. |
-| `UploadAsync(options, ct?)` | `UploadResult` | Encrypt, upload, and send email notification. |
+| `UploadAsync(ct?)` | `UploadResult` | Encrypt and upload to Cryptify silently — no Cryptify-sent emails. Returns UUID. |
+| `UploadAsync(options, ct?)` | `UploadResult` | Same, plus opt-in Cryptify-sent emails (see below). |
 | `ToBytesAsync(ct?)` | `byte[]` | Encrypt and return the raw sealed bytes. |
 
 All methods accept an optional `CancellationToken`.
 
 ## Upload with Notification
 
+The upload is silent by default — both recipient and sender mails are opt-in. Set `Recipients = true` to email each recipient with a download link, and/or `Sender = true` for a confirmation back to the sender.
+
 ```csharp
 var result = await sealed.UploadAsync(new UploadOptions
 {
     Notify = new NotifyOptions
     {
+        Recipients = true,            // email each recipient (default false)
+        Sender = false,               // confirmation to sender (default false)
         Message = "Your documents are ready.",
-        Language = "EN",              // "EN" (default) or "NL"
-        ConfirmToSender = false       // send copy to sender
+        Language = "EN"               // "EN" (default) or "NL"
     }
 });
 
 Console.WriteLine(result.Uuid);
 ```
+
+### Notify options
+
+| Property | Type | Default | Description |
+|---|---|---|---|
+| `Recipients` | `bool` | `false` | Send a download-link email to each recipient |
+| `Sender` | `bool` | `false` | Send a delivery confirmation to the sender |
+| `Message` | `string?` | `null` | Optional unencrypted text included in any mail sent |
+| `Language` | `string` | `"EN"` | Notification email template language (`"EN"` or `"NL"`) |
 
 ## Recipients
 

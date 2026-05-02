@@ -153,7 +153,7 @@ const sealed = pg.encrypt({
 });
 ```
 
-<small>[Source: encryption.ts#L26-L35](https://github.com/encryption4all/postguard-examples/blob/d6c7f01d3cb63d84e94b1e59079b0d80d748d23b/pg-sveltekit/src/lib/postguard/encryption.ts#L26-L35)</small>
+<small>[Source: encryption.ts#L27-L33](https://github.com/encryption4all/postguard-examples/blob/3d06342fad2c749ca4d043070d1ad9c831c7bfc1/pg-sveltekit/src/lib/postguard/encryption.ts#L27-L33)</small>
 
 You can require extra attributes beyond email using `.extraAttribute()`:
 

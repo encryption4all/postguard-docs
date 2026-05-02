@@ -7,8 +7,8 @@
 | Method | What it does | Returns |
 |--------|--------------|---------|
 | `sealed.toBytes()` | Encrypt and buffer in memory | `Promise<Uint8Array>` |
-| `sealed.upload()` | Encrypt and stream to Cryptify | `Promise<{ uuid }>` |
-| `sealed.upload({ notify })` | Same, plus Cryptify sends email | `Promise<{ uuid }>` |
+| `sealed.upload()` | Encrypt and stream to Cryptify (silent — no Cryptify-sent emails) | `Promise<{ uuid }>` |
+| `sealed.upload({ notify })` | Same, plus opt-in Cryptify-sent emails | `Promise<{ uuid }>` |
 
 ## Recipients
 
@@ -29,7 +29,7 @@ const sealed = pg.encrypt({
 });
 ```
 
-<small>[Source: encryption.ts#L26-L35](https://github.com/encryption4all/postguard-examples/blob/d6c7f01d3cb63d84e94b1e59079b0d80d748d23b/pg-sveltekit/src/lib/postguard/encryption.ts#L26-L35)</small>
+<small>[Source: encryption.ts#L27-L33](https://github.com/encryption4all/postguard-examples/blob/3d06342fad2c749ca4d043070d1ad9c831c7bfc1/pg-sveltekit/src/lib/postguard/encryption.ts#L27-L33)</small>
 
 Under the hood, `pg.recipient.email()` creates a policy with the attribute type `pbdf.sidn-pbdf.email.email`, while `pg.recipient.emailDomain()` extracts the domain from the email and uses `pbdf.sidn-pbdf.email.domain`.
 
@@ -54,16 +54,23 @@ const sealed = pg.encrypt({
   signal: abortController?.signal
 });
 
-// Upload only (returns UUID for custom delivery)
+// Silent upload — no Cryptify-sent emails. Returns UUID for custom delivery.
 const { uuid } = await sealed.upload();
 
-// Upload and have Cryptify send email notifications
+// Or opt into Cryptify-sent emails. `recipients: true` emails each
+// recipient with a download link; `sender: true` adds a confirmation
+// back to the sender. Both default false.
 const { uuid } = await sealed.upload({
-  notify: { message: 'Here are your files', language: 'EN' }
+  notify: {
+    recipients: true,
+    sender: false,
+    message: 'Here are your files',
+    language: 'EN'
+  }
 });
 ```
 
-<small>[Source: encryption.ts#L22-L46](https://github.com/encryption4all/postguard-examples/blob/d6c7f01d3cb63d84e94b1e59079b0d80d748d23b/pg-sveltekit/src/lib/postguard/encryption.ts#L22-L46)</small>
+<small>[Source: encryption.ts#L24-L60](https://github.com/encryption4all/postguard-examples/blob/3d06342fad2c749ca4d043070d1ad9c831c7bfc1/pg-sveltekit/src/lib/postguard/encryption.ts#L24-L60)</small>
 
 ::: warning
 Requires `cryptifyUrl` to be set in the constructor.
@@ -84,11 +91,14 @@ Requires `cryptifyUrl` to be set in the constructor.
 
 ### Notify options
 
+The upload is silent by default — both recipient and sender mails are opt-in. Pass `notify` to enable either or both.
+
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `message` | `string` | `undefined` | Custom message in the notification email |
-| `language` | `'EN' \| 'NL'` | `'EN'` | Language of the notification email |
-| `confirmToSender` | `boolean` | `false` | Send a delivery confirmation to the sender |
+| `recipients` | `boolean` | `false` | Send a download-link email to each recipient |
+| `sender` | `boolean` | `false` | Send a delivery confirmation to the sender |
+| `message` | `string` | `undefined` | Optional unencrypted text included in any mail sent |
+| `language` | `'EN' \| 'NL'` | `'EN'` | Notification email template language |
 
 ## Encrypt raw data
 

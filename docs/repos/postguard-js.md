@@ -39,9 +39,9 @@ The SDK uses a lazy builder pattern. `pg.encrypt()` and `pg.open()` return build
 ```ts
 // Encrypt: nothing happens until .upload() or .toBytes()
 const sealed = pg.encrypt({ files, recipients, sign });
-await sealed.upload();                                // encrypt + stream to Cryptify
-await sealed.upload({ notify: { message: 'Hi' } });  // + email notification
-const bytes = await sealed.toBytes();                 // encrypt + buffer in memory
+await sealed.upload();                                       // silent: stream to Cryptify, no emails
+await sealed.upload({ notify: { recipients: true } });       // + email each recipient a link
+const bytes = await sealed.toBytes();                        // encrypt + buffer in memory
 
 // Decrypt: nothing happens until .inspect() or .decrypt()
 const opened = pg.open({ uuid });
@@ -63,12 +63,19 @@ const sealed = pg.encrypt({
   signal: abortController.signal,
 });
 
-// Upload only (returns UUID for custom delivery)
+// Silent upload — no Cryptify-sent emails. Returns UUID for custom delivery.
 const { uuid } = await sealed.upload();
 
-// Upload and have Cryptify send email notifications
+// Or opt into Cryptify-sent emails. `recipients: true` emails each recipient
+// with a download link; `sender: true` adds a confirmation back to the
+// sender. Both default false.
 const { uuid } = await sealed.upload({
-  notify: { message: 'Here are your documents.', language: 'EN' },
+  notify: {
+    recipients: true,
+    sender: false,
+    message: 'Here are your documents.',
+    language: 'EN',
+  },
 });
 ```
 
@@ -82,7 +89,7 @@ const pg = new PostGuard({
 });
 ```
 
-<small>[Source: src/types.ts](https://github.com/encryption4all/postguard-js/blob/33bede4cd1389bc729dca75ad071eb7bf47cd3f1/src/types.ts)</small>
+<small>[Source: src/types.ts](https://github.com/encryption4all/postguard-js/blob/2e2e0442a23b9f821a2bca008fe270af6c487e30/src/types.ts)</small>
 
 ### Encrypt raw data (no upload)
 

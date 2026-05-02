@@ -40,6 +40,8 @@ const sealed = pg.encrypt({
   sign: pg.sign.apiKey('PG-your-key'),
 });
 
+// Silent upload by default. Pass `notify: { recipients: true }` to have
+// Cryptify also email the recipient a download link.
 const { uuid } = await sealed.upload();
 ```
 
@@ -72,7 +74,7 @@ export default defineConfig({
 });
 ```
 
-<small>[Source: vite.config.ts](https://github.com/encryption4all/postguard-examples/blob/d6c7f01d3cb63d84e94b1e59079b0d80d748d23b/pg-sveltekit/vite.config.ts)</small>
+<small>[Source: vite.config.ts](https://github.com/encryption4all/postguard-examples/blob/3d06342fad2c749ca4d043070d1ad9c831c7bfc1/pg-sveltekit/vite.config.ts)</small>
 
 No Node.js polyfills are needed. The SDK handles all browser compatibility internally.
 
@@ -113,6 +115,8 @@ var sealed = pg.Encrypt(new EncryptInput
     Sign = pg.Sign.ApiKey("PG-your-key")
 });
 
+// Silent upload by default. Pass `new UploadOptions { Notify = new
+// NotifyOptions { Recipients = true } }` to also email the recipient.
 var result = await sealed.UploadAsync();
 Console.WriteLine(result.Uuid);
 ```

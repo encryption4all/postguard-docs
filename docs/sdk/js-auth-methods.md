@@ -29,11 +29,15 @@ const sealed = pg.encrypt({
 });
 
 const result = await sealed.upload({
-  notify: { message: message ?? undefined, language: 'EN' }
+  notify: {
+    recipients: true,
+    message: message ?? undefined,
+    language: 'EN'
+  }
 });
 ```
 
-<small>[Source: encryption.ts#L26-L43](https://github.com/encryption4all/postguard-examples/blob/d6c7f01d3cb63d84e94b1e59079b0d80d748d23b/pg-sveltekit/src/lib/postguard/encryption.ts#L26-L43)</small>
+<small>[Source: encryption.ts#L24-L44](https://github.com/encryption4all/postguard-examples/blob/3d06342fad2c749ca4d043070d1ad9c831c7bfc1/pg-sveltekit/src/lib/postguard/encryption.ts#L24-L44)</small>
 
 The SDK sends the API key as a `Bearer` token in the `Authorization` header when requesting signing keys from the PKG at `POST /v2/irma/sign/key`.
 

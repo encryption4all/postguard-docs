@@ -31,7 +31,7 @@ export default defineConfig({
 });
 ```
 
-<small>[Source: vite.config.ts](https://github.com/encryption4all/postguard-examples/blob/d6c7f01d3cb63d84e94b1e59079b0d80d748d23b/pg-sveltekit/vite.config.ts)</small>
+<small>[Source: vite.config.ts](https://github.com/encryption4all/postguard-examples/blob/3d06342fad2c749ca4d043070d1ad9c831c7bfc1/pg-sveltekit/vite.config.ts)</small>
 
 No Node.js polyfills are needed. The SDK handles browser compatibility internally.
 
@@ -47,7 +47,7 @@ PUBLIC_APP_NAME=PostGuard for Business Example
 PG_API_KEY=PG-your-key-here
 ```
 
-<small>[Source: .env.example](https://github.com/encryption4all/postguard-examples/blob/d6c7f01d3cb63d84e94b1e59079b0d80d748d23b/pg-sveltekit/.env.example)</small>
+<small>[Source: .env.example](https://github.com/encryption4all/postguard-examples/blob/3d06342fad2c749ca4d043070d1ad9c831c7bfc1/pg-sveltekit/.env.example)</small>
 
 ```ts
 import { env } from '$env/dynamic/private';
@@ -55,7 +55,7 @@ import { env } from '$env/dynamic/private';
 export const PG_API_KEY = env['PG_API_KEY'] ?? '';
 ```
 
-<small>[Source: config.server.ts](https://github.com/encryption4all/postguard-examples/blob/d6c7f01d3cb63d84e94b1e59079b0d80d748d23b/pg-sveltekit/src/lib/config.server.ts)</small>
+<small>[Source: config.server.ts](https://github.com/encryption4all/postguard-examples/blob/3d06342fad2c749ca4d043070d1ad9c831c7bfc1/pg-sveltekit/src/lib/config.server.ts)</small>
 
 ```ts
 import { env } from '$env/dynamic/public';
@@ -65,7 +65,7 @@ export const PKG_URL = env.PUBLIC_PKG_URL || 'https://pkg.staging.yivi.app';
 export const CRYPTIFY_URL = env.PUBLIC_CRYPTIFY_URL || 'https://fileshare.staging.yivi.app';
 ```
 
-<small>[Source: config.ts](https://github.com/encryption4all/postguard-examples/blob/d6c7f01d3cb63d84e94b1e59079b0d80d748d23b/pg-sveltekit/src/lib/config.ts)</small>
+<small>[Source: config.ts](https://github.com/encryption4all/postguard-examples/blob/3d06342fad2c749ca4d043070d1ad9c831c7bfc1/pg-sveltekit/src/lib/config.ts)</small>
 
 ## Encrypt and Upload Files
 
@@ -96,9 +96,9 @@ export async function encryptAndSend(options: EncryptAndSendOptions): Promise<st
 
   const result = await sealed.upload({
     notify: {
+      recipients: true,
       message: message ?? undefined,
-      language: 'EN',
-      confirmToSender: false
+      language: 'EN'
     }
   });
 
@@ -106,7 +106,7 @@ export async function encryptAndSend(options: EncryptAndSendOptions): Promise<st
 }
 ```
 
-<small>[Source: encryption.ts](https://github.com/encryption4all/postguard-examples/blob/d6c7f01d3cb63d84e94b1e59079b0d80d748d23b/pg-sveltekit/src/lib/postguard/encryption.ts)</small>
+<small>[Source: encryption.ts](https://github.com/encryption4all/postguard-examples/blob/3d06342fad2c749ca4d043070d1ad9c831c7bfc1/pg-sveltekit/src/lib/postguard/encryption.ts)</small>
 
 The server load function passes the API key to the page:
 
