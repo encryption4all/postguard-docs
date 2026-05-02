@@ -115,6 +115,8 @@ function pickTier(encryptedBytes: number, base64Length: number): EnvelopeTier {
 Earlier releases always emitted a hidden `<div id="postguard-armor">` block in `htmlBody` carrying the full base64 ciphertext, and `attachment` was always a `File`. Both have changed. The armor block has been removed (it pushed bodies past Outlook's 1 M-character `setAsync` limit), and `attachment` is now `File | null` — null for tier 3.
 :::
 
+An optional `&recipient=<key>` may ride alongside either query-string form. When present and matching one of the policy recipients, the recipient page skips the picker and authenticates against that key directly. The matching parser logic on the recipient side lives in [postguard-website](/repos/postguard-website#recipient-url-forms).
+
 ### Usage
 
 The Thunderbird addon creates the envelope in one call:
