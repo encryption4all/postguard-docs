@@ -109,8 +109,28 @@ Decryption can throw:
 
 - `DecryptionError`: general decryption failure, or missing `element`/`session`
 - `IdentityMismatchError`: the Yivi attributes did not match the encryption policy
+- `YiviSessionError`: the Yivi disclosure session ended without success (cancelled, timed out, aborted)
 - `NetworkError`: PKG or Cryptify communication failure
 
-Catch `IdentityMismatchError` first to show a recipient-mismatch message, then fall through to a generic error branch for everything else.
+Catch `IdentityMismatchError` first to show a recipient-mismatch message, then `YiviSessionError` to surface a friendly "session cancelled" message instead of a generic decryption failure, then fall through to a generic error branch for everything else.
+
+```ts
+import { YiviSessionError, IdentityMismatchError } from '@e4a/pg-js';
+
+try {
+  const result = await pg.open({ uuid }).decrypt({ element: '#yivi-web-form' });
+  result.download();
+} catch (e) {
+  if (e instanceof IdentityMismatchError) {
+    showMessage('You are not a recipient of this message.');
+    return;
+  }
+  if (e instanceof YiviSessionError) {
+    showMessage(e.cancelled ? 'Sign-in cancelled.' : `Sign-in failed: ${e.reason}.`);
+    return;
+  }
+  throw e;
+}
+```
 
 See [Error Handling](/sdk/js-errors) for the full error reference.

@@ -74,19 +74,50 @@ Provide at least one of `htmlBody` or `plainTextBody`. If both are provided, the
 
 ## `createEnvelope()`
 
-Takes a `Sealed` encryption builder and wraps the encrypted output into an email envelope. The function is async because it encrypts the data and may upload to Cryptify if the payload is too large.
+Takes a `Sealed` encryption builder and wraps the encrypted output into an email envelope. The function is async because it encrypts the data and may upload to Cryptify.
 
-The envelope contains a placeholder HTML body (telling the recipient to use PostGuard to decrypt), a plain text fallback, and the ciphertext as a file attachment named `postguard.encrypted`.
+The envelope contains a placeholder HTML body (telling the recipient to use PostGuard to decrypt), a plain text fallback, and (in most cases) the ciphertext as a file attachment named `postguard.encrypted`.
 
-The body fallback link in the placeholder HTML and plain-text body points at one of three URL shapes on the configured `websiteUrl`, picked from the envelope tier:
+### Tier model
 
-| Tier | Encryption mode | URL shape | Notes |
-|------|-----------------|-----------|-------|
-| 1 (small payload) | any | `/decrypt#<urlsafe-base64>` | The full ciphertext rides in the URL fragment. The recipient page decodes it client-side — no Cryptify round-trip. |
-| 2/3 | `data` (MIME) | `/decrypt?uuid=<id>` | The ciphertext was uploaded to [Cryptify](/repos/cryptify); the recipient page calls `pg.open({ uuid })` to fetch and decrypt. |
-| 2/3 | `files` | `/download?uuid=<id>` | Same fetch path as above, but the recipient page surfaces the contained files instead of rendering an inner MIME body. |
+`createEnvelope` picks one of three tiers based on the encrypted payload size. Each tier decides whether to attach the ciphertext locally, whether to upload it to Cryptify, and which kind of fallback link to put in the body.
+
+| Tier | Selected when | Local attachment | Cryptify upload | Body fallback link |
+|------|---------------|------------------|-----------------|--------------------|
+| 1 | base64 ciphertext length ≤ `PG_MAX_URL_FRAGMENT_SIZE` | yes | no | `/decrypt#<base64>` (whole ciphertext in the URL fragment) |
+| 2 | ciphertext bytes ≤ `PG_MAX_ATTACHMENT_SIZE` | yes | yes (opt out with `uploadToCryptify: false`) | `/decrypt?uuid=…` (data) or `/download?uuid=…` (files) |
+| 3 | ciphertext bytes > `PG_MAX_ATTACHMENT_SIZE` | no | yes (always) | `/decrypt?uuid=…` (data) or `/download?uuid=…` (files) |
+
+Tier 3 omits the local attachment because Exchange tenants typically reject messages with attachments above ~25 MB. Recipients of a tier 3 envelope rely on the Cryptify download link in the body.
+
+The constants are exported from `@e4a/pg-js`:
+
+| Constant | Default | Meaning |
+|----------|---------|---------|
+| `PG_MAX_URL_FRAGMENT_SIZE` | `100_000` | Tier 1 cap, in characters of base64 ciphertext |
+| `PG_MAX_ATTACHMENT_SIZE` | `10 * 1024 * 1024` | Tier 2/3 boundary, in bytes of binary ciphertext |
+
+<small>[Source: extract.ts#L1-L12](https://github.com/encryption4all/postguard-js/blob/91c84855b4613e9c8c1fe65fc0f5a4dc4c6d11d6/src/email/extract.ts#L1-L12)</small>
+
+The tier-selection logic itself is a few lines:
+
+```ts
+function pickTier(encryptedBytes: number, base64Length: number): EnvelopeTier {
+  if (base64Length <= PG_MAX_URL_FRAGMENT_SIZE) return 'tier1';
+  if (encryptedBytes <= PG_MAX_ATTACHMENT_SIZE) return 'tier2';
+  return 'tier3';
+}
+```
+
+<small>[Source: envelope.ts#L141-L145](https://github.com/encryption4all/postguard-js/blob/91c84855b4613e9c8c1fe65fc0f5a4dc4c6d11d6/src/email/envelope.ts#L141-L145)</small>
+
+::: warning Breaking change in 0.10
+Earlier releases always emitted a hidden `<div id="postguard-armor">` block in `htmlBody` carrying the full base64 ciphertext, and `attachment` was always a `File`. Both have changed. The armor block has been removed (it pushed bodies past Outlook's 1 M-character `setAsync` limit), and `attachment` is now `File | null` — null for tier 3.
+:::
 
 An optional `&recipient=<key>` may ride alongside either query-string form. When present and matching one of the policy recipients, the recipient page skips the picker and authenticates against that key directly. The matching parser logic on the recipient side lives in [postguard-website](/repos/postguard-website#recipient-url-forms).
+
+### Usage
 
 The Thunderbird addon creates the envelope in one call:
 
@@ -109,6 +140,8 @@ const envelope = await pg.email.createEnvelope({
 
 <small>[Source: yivi-popup.ts#L90-L136](https://github.com/encryption4all/postguard-tb-addon/blob/57234eebd32d64bd011086fe89ecdd7ac40fc15d/src/pages/yivi-popup/yivi-popup.ts#L90-L136)</small>
 
+Callers that handle the result must null-check `envelope.attachment` before reading it, since tier 3 envelopes carry no attachment.
+
 ### Parameters
 
 | Parameter | Type | Required | Description |
@@ -117,24 +150,23 @@ const envelope = await pg.email.createEnvelope({
 | `from` | `string` | Yes | Sender email address |
 | `websiteUrl` | `string` | No | URL to link in the placeholder body (default: `https://postguard.eu`) |
 | `unencryptedMessage` | `string` | No | Unencrypted message shown in the placeholder |
+| `senderAttributes` | `string[]` | No | Verified sender attributes to display below the sender name |
+| `uploadToCryptify` | `boolean` | No | Default `true`. Set `false` to keep tier 2 envelopes as a local attachment only and skip the Cryptify upload + body link. Has no effect on tier 1 (no upload happens) or tier 3 (upload is always attempted because there is no fallback). |
 
 ### Result
 
 | Property | Type | Description |
 |----------|------|-------------|
 | `subject` | `string` | Always `"PostGuard Encrypted Email"` |
-| `htmlBody` | `string` | Placeholder HTML with decrypt button and armored payload |
+| `htmlBody` | `string` | Placeholder HTML with the decrypt button and the fallback link for the selected tier |
 | `plainTextBody` | `string` | Plain text fallback |
-| `attachment` | `File` | The `postguard.encrypted` file |
+| `attachment` | `File \| null` | The `postguard.encrypted` file in tiers 1 and 2, `null` in tier 3 |
+| `tier` | `'tier1' \| 'tier2' \| 'tier3'` | Which tier was selected |
+| `uploadUuid` | `string \| null` | Cryptify UUID if the payload was uploaded, otherwise `null` |
 
 ## `extractCiphertext()`
 
-Extracts the encrypted ciphertext from a received email. It checks two locations in order:
-
-1. Attachments: looks for a file named `postguard.encrypted`
-2. HTML body: looks for an armored payload between `-----BEGIN POSTGUARD MESSAGE-----` and `-----END POSTGUARD MESSAGE-----` markers
-
-Returns a `Uint8Array` with the ciphertext, or `null` if nothing is found.
+Extracts the encrypted ciphertext from a received email by looking for an attachment named `postguard.encrypted`. Returns a `Uint8Array` with the ciphertext, or `null` if no such attachment is found.
 
 ```ts
 const ciphertext = pg.email.extractCiphertext({
@@ -143,12 +175,28 @@ const ciphertext = pg.email.extractCiphertext({
 });
 ```
 
+<small>[Source: extract.ts#L14-L28](https://github.com/encryption4all/postguard-js/blob/91c84855b4613e9c8c1fe65fc0f5a4dc4c6d11d6/src/email/extract.ts#L14-L28)</small>
+
+Tier 3 envelopes carry no attachment, so `extractCiphertext` returns `null` on them. Pair it with `extractUploadUuid` to find a Cryptify UUID in the body and download the ciphertext from there.
+
+The `htmlBody` field is accepted for compatibility but is no longer consulted. The legacy in-body armor block (`<div id="postguard-armor">` and the `-----BEGIN POSTGUARD MESSAGE-----` markers) is no longer emitted, and consumer code that stripped or parsed it can be removed.
+
 ### Parameters
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `htmlBody` | `string` | No | The HTML body of the received email |
+| `htmlBody` | `string` | No | Accepted for compatibility, no longer consulted |
 | `attachments` | `Array<{ name, data }>` | No | Email attachments (data as ArrayBuffer) |
+
+## `extractUploadUuid()`
+
+Finds a Cryptify UUID in the HTML body of a received email. It matches either the `/decrypt?uuid=…` or `/download?uuid=…` link produced by tier 2 and tier 3 envelopes. Returns the UUID, or `null` if none is found.
+
+```ts
+const uuid = pg.email.extractUploadUuid(htmlBody);
+```
+
+<small>[Source: extract.ts#L35-L43](https://github.com/encryption4all/postguard-js/blob/91c84855b4613e9c8c1fe65fc0f5a4dc4c6d11d6/src/email/extract.ts#L35-L43)</small>
 
 ## `injectMimeHeaders()`
 

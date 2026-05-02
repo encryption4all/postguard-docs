@@ -122,5 +122,26 @@ All encryption methods can throw:
 - `PostGuardError`: general SDK error
 - `NetworkError`: PKG or Cryptify communication failure (includes `status` and `body` properties)
 - `YiviNotInstalledError`: Yivi packages not installed (when using `pg.sign.yivi`)
+- `YiviSessionError`: the Yivi disclosure session ended without success (cancelled, timed out, aborted) — only when using `pg.sign.yivi`
+
+When the sender uses `pg.sign.yivi(...)`, distinguish a cancelled disclosure from a real failure by checking `YiviSessionError` first:
+
+```ts
+import { YiviSessionError } from '@e4a/pg-js';
+
+try {
+  const { uuid } = await pg.encrypt({
+    files,
+    recipients,
+    sign: pg.sign.yivi({ element: '#yivi-web-form', senderEmail }),
+  }).upload();
+} catch (e) {
+  if (e instanceof YiviSessionError) {
+    showMessage(e.cancelled ? 'Sign-in cancelled.' : `Sign-in failed: ${e.reason}.`);
+    return;
+  }
+  throw e;
+}
+```
 
 See [Error Handling](/sdk/js-errors) for the full error reference.
