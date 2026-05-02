@@ -28,15 +28,17 @@ var sealed = pg.Encrypt(new EncryptInput
     Sign = pg.Sign.ApiKey("PG-xxx")
 });
 
-// Upload only: returns UUID for custom email distribution
+// Silent upload — no Cryptify-sent emails. Returns UUID for custom delivery.
 var result = await sealed.UploadAsync();
 Console.WriteLine(result.Uuid);
 
-// Upload with email notification
+// Or opt into Cryptify-sent emails (both flags default false):
 var result = await sealed.UploadAsync(new UploadOptions
 {
     Notify = new NotifyOptions
     {
+        Recipients = true,
+        Sender = true,
         Message = "Your documents",
         Language = "EN"
     }

@@ -54,9 +54,11 @@ const sealed = pg.encrypt({
   sign: pg.sign.apiKey('PG-your-key')
 });
 
-await sealed.upload({ notify: { message: 'Here are your files' } });
+await sealed.upload({
+  notify: { recipients: true, message: 'Here are your files' }
+});
 ```
 
-<small>[Source: encryption.ts#L22-L46](https://github.com/encryption4all/postguard-examples/blob/d6c7f01d3cb63d84e94b1e59079b0d80d748d23b/pg-sveltekit/src/lib/postguard/encryption.ts#L22-L46)</small>
+<small>[Source: encryption.ts#L24-L44](https://github.com/encryption4all/postguard-examples/blob/3d06342fad2c749ca4d043070d1ad9c831c7bfc1/pg-sveltekit/src/lib/postguard/encryption.ts#L24-L44)</small>
 
 Read the [concepts guide](/guide/concepts) to understand how this works, or jump straight to [getting started](/sdk/getting-started).
