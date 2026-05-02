@@ -205,7 +205,9 @@ const envelope = await pg.email.createEnvelope({ sealed, from: 'alice@example.co
 // envelope.subject → "PostGuard Encrypted Email"
 // envelope.htmlBody → Placeholder HTML with PostGuard branding
 // envelope.plainTextBody → Plain text fallback
-// envelope.attachment → File("postguard.encrypted")
+// envelope.attachment → File("postguard.encrypted") | null  (null in tier 3, see /sdk/js-email-helpers)
+// envelope.tier → "tier1" | "tier2" | "tier3"
+// envelope.uploadUuid → Cryptify UUID (string) when uploaded, otherwise null
 
 // --- On the receiving side ---
 const ciphertext = extractCiphertext({
