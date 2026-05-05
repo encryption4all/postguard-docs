@@ -178,7 +178,7 @@ async function handleEncrypt(pg: PostGuard, data: EncryptPopupData, windowId: nu
 <small>[Source: yivi-popup.ts#L90-L136](https://github.com/encryption4all/postguard-tb-addon/blob/57234eebd32d64bd011086fe89ecdd7ac40fc15d/src/pages/yivi-popup/yivi-popup.ts#L90-L136)</small>
 
 ::: warning Tier 3 envelopes have no attachment
-As of `@e4a/pg-js` 0.10, `envelope.attachment` is `File | null` and is `null` for tier 3 envelopes (ciphertext over `PG_MAX_ATTACHMENT_SIZE`, ~10 MB by default). The snippet above dereferences `envelope.attachment.arrayBuffer()` directly, so it works only when the payload falls into tier 1 or tier 2. The addon needs a null branch that skips the `attachmentBase64` field and relies on the Cryptify download link in `envelope.htmlBody` instead. Tracked separately. See [Email Helpers](/sdk/js-email-helpers#createenvelope) for the tier model.
+As of `@e4a/pg-js` 0.10, `envelope.attachment` is `File | null` and is `null` for tier 3 envelopes (ciphertext over `PG_MAX_ATTACHMENT_SIZE`, ~10 MB by default). The snippet above dereferences `envelope.attachment.arrayBuffer()` directly, so it works only when the payload falls into tier 1 or tier 2. The addon needs a null branch that skips the `attachmentBase64` field and relies on the Cryptify download link in `envelope.htmlBody` instead. Fixed in [postguard-tb-addon#85](https://github.com/encryption4all/postguard-tb-addon/pull/85). See [Email Helpers](/sdk/js-email-helpers#createenvelope) for the tier model.
 :::
 
 ### Decrypt Handler
@@ -319,13 +319,19 @@ const importedMsg = await browser.messages.import(file, msg.folder.id);
 
 ```ts
 async function isPGEncrypted(msgId: number): Promise<boolean> {
+  // Tier 1/2 envelopes ship a postguard.encrypted attachment. Tier 3 has
+  // no attachment — the encrypted payload only lives in Cryptify, with
+  // a /decrypt?uuid=… link in the body. Both shapes are handled by the
+  // popup's decrypt path; we just need to detect "looks like a PostGuard
+  // message" here so the banner offers the Decrypt button instead of
+  // falling back to the wasEncrypted info banner.
   const attachments = await browser.messages.listAttachments(msgId);
   if (attachments.some((att) => att.name === "postguard.encrypted")) return true;
 
   try {
     const full = await browser.messages.getFull(msgId);
     const bodyHtml = findHtmlBody(full);
-    if (bodyHtml && bodyHtml.includes("-----BEGIN POSTGUARD MESSAGE-----")) return true;
+    if (bodyHtml && extractUploadUuid(bodyHtml)) return true;
   } catch {
     // ignore
   }
@@ -334,7 +340,9 @@ async function isPGEncrypted(msgId: number): Promise<boolean> {
 }
 ```
 
-<small>[Source: background.ts#L226-L240](https://github.com/encryption4all/postguard-tb-addon/blob/57234eebd32d64bd011086fe89ecdd7ac40fc15d/src/background/background.ts#L226-L240)</small>
+<small>[Source: background.ts#L247-L266](https://github.com/encryption4all/postguard-tb-addon/blob/02139424e12ddfb6cb700cda954015ef7c91e7fa/src/background/background.ts#L247-L266)</small>
+
+Tier 3 envelopes carry no `postguard.encrypted` attachment; the ciphertext lives in Cryptify and the body holds only a `/decrypt?uuid=…` link. The legacy `-----BEGIN POSTGUARD MESSAGE-----` body-armor check has been removed since `@e4a/pg-js` 1.1 no longer emits it. The current detector uses `extractUploadUuid()` from `@e4a/pg-js` to recognise the uuid-bearing tier 3 body.
 
 ## Bundling
 
