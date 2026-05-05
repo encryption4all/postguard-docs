@@ -69,10 +69,24 @@ When a request would push the sender over the per-upload or the rolling-window l
 
 Cryptify exposes a file upload/download API. An OpenAPI 3.0 specification is available in `api-description.yaml` in the repository root. The main endpoints:
 
-- `POST /fileupload/init`: Initialize a multipart file upload (takes sender email, recipient email, file size, mail content, and language).
+- `POST /fileupload/init`: Initialize a multipart file upload. The JSON body takes `recipient`, `mailContent`, `mailLang`, `confirm`, and the optional `notifyRecipients`.
 - `PUT /fileupload/{uuid}`: Upload a file chunk (use `Content-Range` header for chunked uploads).
-- `POST /fileupload/finalize/{uuid}`: Finalize the upload and send the notification email.
+- `POST /fileupload/finalize/{uuid}`: Finalize the upload (sends the recipient notification email if `notifyRecipients` was `true` on init).
 - `GET /filedownload/{uuid}`: Download a file.
+
+### `POST /fileupload/init` request body
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `recipient` | string (email) | yes | Recipient email address. |
+| `mailContent` | string | yes | Body text included in the recipient and confirmation emails. |
+| `mailLang` | string | yes | Email language. `EN` or `NL`. |
+| `confirm` | boolean | yes | Send a confirmation email to the sender. |
+| `notifyRecipients` | boolean | no | Email each recipient with a download link. Defaults to `true` when omitted, for backward compatibility. Set to `false` to upload silently when the encrypted payload reaches the recipient through another channel. |
+
+The `notifyRecipients` field was added in cryptify 0.9 (see [encryption4all/cryptify#135](https://github.com/encryption4all/cryptify/pull/135)). Direct API callers that omit it keep the original notify-on-finalize behaviour. SDK callers (`@e4a/pg-js` 1.2.0+, `E4A.PostGuard` 0.3.0+) send `false` explicitly so the silent-by-default semantics hold regardless of the cryptify version on the other end.
+
+<small>[Source: api-description.yaml#L33-L72](https://github.com/encryption4all/cryptify/blob/723c8db10420180e50a5d97bb852794683c9544d/api-description.yaml#L33-L72)</small>
 
 ## Development
 
