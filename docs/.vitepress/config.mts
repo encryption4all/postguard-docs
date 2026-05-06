@@ -81,7 +81,6 @@ export default withMermaid(defineConfig({
             items: [
               { text: 'postguard-js', link: '/repos/postguard-js' },
               { text: 'postguard-dotnet', link: '/repos/postguard-dotnet' },
-              { text: 'pg-components', link: '/repos/pg-components' },
             ],
           },
           {

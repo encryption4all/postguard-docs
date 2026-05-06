@@ -33,7 +33,6 @@ Client libraries for integrating PostGuard into applications.
 |---|---|---|
 | [postguard-js](/repos/postguard-js) | TypeScript | Browser and Node.js SDK (`@e4a/pg-js`) |
 | [postguard-dotnet](/repos/postguard-dotnet) | C# | .NET SDK for sending-side encryption (`E4A.PostGuard`) |
-| [pg-components](/repos/pg-components) | Svelte | Reusable UI component library (`@e4a/pg-components`) |
 
 ## Examples
 
@@ -61,6 +60,5 @@ pg-curve
               └── pg-cli
   └── ibs (used by pg-core for sender signatures)
 
-pg-components ──────────── postguard-website
 cryptify (backend) ─────── postguard-website (file storage)
 ```

@@ -6,7 +6,7 @@ The PostGuard web frontend for encrypting and sending files. Users pick files, c
 
 ## Integration
 
-The website uses `@e4a/pg-js` with two Vite plugins for WASM support (`vite-plugin-wasm` and `vite-plugin-top-level-await`). It also uses `@e4a/pg-components` for shared UI elements like file pickers and Yivi authentication dialogs.
+The website uses `@e4a/pg-js` with two Vite plugins for WASM support (`vite-plugin-wasm` and `vite-plugin-top-level-await`).
 
 The website contains two submodules: Cryptify (the file sharing backend, embedded in an iframe) and the Thunderbird addon (the `.xpi` file can be downloaded from the website). To update the submodules:
 
