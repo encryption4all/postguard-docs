@@ -146,7 +146,9 @@ const result = await opened.decrypt({
 ## Signing Methods
 
 ```ts
-// Business API key (server-side)
+// Business API key (server-side). The SDK forwards this key to Cryptify
+// uploads as `Authorization: Bearer <apiKey>`, which unlocks the higher
+// upload-quota tier (see /repos/cryptify#upload-limits).
 pg.sign.apiKey('your-api-key')
 
 // Yivi web session (browser, inline QR code)

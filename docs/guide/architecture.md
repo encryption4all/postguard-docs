@@ -179,6 +179,12 @@ Both encryption and decryption support streaming (`ReadableStream`/`WritableStre
 | `GET` | `/v2/irma/key/{timestamp}` | Retrieve a User Secret Key (USK). Requires `Authorization: Bearer <jwt>`. The timestamp must match the one embedded in the ciphertext. |
 | `POST` | `/v2/irma/sign/key` | Retrieve signing keys. Authenticate with either an API key (`Bearer PG-...`) or a Yivi JWT. |
 
+#### API Key Validation
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/v2/api-key/validate` | Confirm a `PG-…` API key is valid and return `{ tenant_id, organisation_name }`. Requires `Authorization: Bearer PG-…`. Used by sibling services (e.g. Cryptify) that need to gate per-tenant behaviour on a validated key without going through signing-key issuance. Validates against the shared `business_api_keys` table; only registered when the PKG is configured with a database pool. |
+
 #### Health
 
 | Method | Endpoint | Description |
@@ -194,10 +200,12 @@ The key issuance endpoints require a valid `Authorization: Bearer <jwt>` header.
 
 | Method | Endpoint | Description |
 |---|---|---|
-| `POST` | `/fileupload/init` | Initialize a file upload. Returns a UUID and upload token. |
-| `PUT` | `/fileupload/{uuid}` | Upload a chunk. Uses `Content-Range` headers for offset tracking. Requires `cryptifytoken` header. |
+| `POST` | `/fileupload/init` | Initialize a file upload. Returns a UUID and upload token. Optional `Authorization: Bearer PG-…` unlocks the higher upload-quota tier; Cryptify forwards the bearer to PKG's `/v2/api-key/validate` and uses the returned tenant id for rolling-window accounting. |
+| `PUT` | `/fileupload/{uuid}` | Upload a chunk. Uses `Content-Range` headers for offset tracking. Requires `cryptifytoken` header. Carries the same `Authorization` bearer on each chunk as `init`. |
 | `POST` | `/fileupload/finalize/{uuid}` | Finalize the upload after all chunks are sent. |
 | `GET` | `/filedownload/{uuid}` | Download an encrypted file as a stream. |
+
+See [Upload limits](/repos/cryptify#upload-limits) and [Authentication for the higher tier](/repos/cryptify#authentication-for-the-higher-tier) on the Cryptify page for the tier breakdown and PKG-unreachable behaviour (503 vs. 413).
 
 ## Component Diagram
 
