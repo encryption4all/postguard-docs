@@ -7,7 +7,7 @@
 | Method | What it does | Returns |
 |--------|--------------|---------|
 | `sealed.toBytes()` | Encrypt and buffer in memory | `Promise<Uint8Array>` |
-| `sealed.upload()` | Encrypt and stream to Cryptify (silent — no Cryptify-sent emails) | `Promise<{ uuid }>` |
+| `sealed.upload()` | Encrypt and stream to Cryptify (silent, no Cryptify-sent emails) | `Promise<{ uuid }>` |
 | `sealed.upload({ notify })` | Same, plus opt-in Cryptify-sent emails | `Promise<{ uuid }>` |
 
 ## Recipients
@@ -91,7 +91,7 @@ Requires `cryptifyUrl` to be set in the constructor.
 
 ### Notify options
 
-The upload is silent by default — both recipient and sender mails are opt-in. Pass `notify` to enable either or both.
+The upload is silent by default. Both recipient and sender mails are opt-in. Pass `notify` to enable either or both.
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
@@ -132,7 +132,7 @@ All encryption methods can throw:
 - `PostGuardError`: general SDK error
 - `NetworkError`: PKG or Cryptify communication failure (includes `status` and `body` properties)
 - `YiviNotInstalledError`: Yivi packages not installed (when using `pg.sign.yivi`)
-- `YiviSessionError`: the Yivi disclosure session ended without success (cancelled, timed out, aborted) — only when using `pg.sign.yivi`
+- `YiviSessionError`: the Yivi disclosure session ended without success (cancelled, timed out, aborted), only when using `pg.sign.yivi`
 
 When the sender uses `pg.sign.yivi(...)`, distinguish a cancelled disclosure from a real failure by checking `YiviSessionError` first:
 

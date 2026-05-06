@@ -53,7 +53,7 @@ var sealed = pg.Encrypt(new EncryptInput
 
 | Method | Returns | Description |
 |---|---|---|
-| `UploadAsync(ct?)` | `UploadResult` | Encrypt and upload to Cryptify silently — no Cryptify-sent emails. Returns UUID. |
+| `UploadAsync(ct?)` | `UploadResult` | Encrypt and upload to Cryptify silently, no Cryptify-sent emails. Returns UUID. |
 | `UploadAsync(options, ct?)` | `UploadResult` | Same, plus opt-in Cryptify-sent emails (see below). |
 | `ToBytesAsync(ct?)` | `byte[]` | Encrypt and return the raw sealed bytes. |
 
@@ -61,7 +61,7 @@ All methods accept an optional `CancellationToken`.
 
 ## Upload with Notification
 
-The upload is silent by default — both recipient and sender mails are opt-in. Set `Recipients = true` to email each recipient with a download link, and/or `Sender = true` for a confirmation back to the sender.
+The upload is silent by default. Both recipient and sender mails are opt-in. Set `Recipients = true` to email each recipient with a download link, and/or `Sender = true` for a confirmation back to the sender.
 
 ```csharp
 var result = await sealed.UploadAsync(new UploadOptions
