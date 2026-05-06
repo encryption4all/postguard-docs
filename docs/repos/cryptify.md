@@ -39,13 +39,15 @@ The `chunk_size` setting caps the size of each `PUT /fileupload/{uuid}` body. Cl
 
 Cryptify enforces three independent limits on every upload. They are constants in `src/store.rs`, not config options.
 
-| Limit | Anonymous senders | API-key senders | Notes |
+| Limit | Default tier | API-key tier | Notes |
 |---|---|---|---|
-| Per-chunk size | `chunk_size` from config (default 5 MB) | same as anonymous | Bigger chunks are rejected with `400 Bad Request`. |
+| Per-chunk size | `chunk_size` from config (default 5 MB) | same as default | Bigger chunks are rejected with `400 Bad Request`. |
 | Per-upload size | 5 GB | 100 GB | Total bytes for a single upload session. |
-| Rolling window total | 5 GB per 14 days | 100 GB per 14 days | Sum of all uploads from the same sender email in the trailing 14 days. |
+| Rolling window total | 5 GB per 14 days | 100 GB per 14 days | Default tier accounts per sender email; API-key tier accounts per tenant id. |
 
-A sender is identified by the email attribute disclosed in the encrypted envelope's signature. The rolling window only counts finalized uploads.
+The default tier identifies the sender by the email attribute disclosed in the encrypted envelope's signature. The API-key tier accounts on the validated tenant id (`api-key:<organizations.id>`) so a single tenant cannot evade quota by varying sender attributes. See [Authentication for the higher tier](#authentication-for-the-higher-tier) below.
+
+The rolling window only counts finalized uploads.
 
 When a request would push the sender over the per-upload or the rolling-window limit, the server responds with `413 Payload Too Large` and a JSON body:
 
@@ -61,9 +63,30 @@ When a request would push the sender over the per-upload or the rolling-window l
 
 `limit` is either `"per_upload"` or `"rolling_window"`. `resets_at` is an RFC 3339 timestamp for when the oldest counted upload expires from the rolling window. It is `null` for `per_upload` rejections, since the per-upload limit does not reset.
 
-`GET /usage` returns the current state for the authenticated sender, including `used_bytes`, `limit_bytes`, `per_upload_limit_bytes`, `window_days`, and `resets_at`.
+`GET /usage` returns the current state for the authenticated sender, including `used_bytes`, `limit_bytes`, `per_upload_limit_bytes`, `window_days`, and `resets_at`. When the request includes a validated `Authorization: Bearer PG-…`, the response describes the per-tenant bucket (`api-key:<tenant>`); otherwise it describes the per-email bucket.
 
 <small>[Source: src/store.rs#L11-L15](https://github.com/encryption4all/cryptify/blob/58883a86b369af08d92db93aa1025f9eba3c73eb/src/store.rs#L11-L15)</small>
+
+## Authentication for the higher tier
+
+Callers unlock the API-key tier by sending `Authorization: Bearer PG-…` on every upload request (`init`, each chunk PUT, and `finalize`). The key is a PostGuard for Business API key issued through the [postguard-business](/repos/postguard-business) portal.
+
+Cryptify itself does not own the key allowlist. On `init` it forwards the bearer to PKG's `GET /v2/api-key/validate`, which authenticates against the shared `business_api_keys` table and returns the tenant id (`organizations.id`). Cryptify uses that id for tier selection and as the rolling-window accounting key. Validation runs only at `init` — once the upload session is established, the tier and accounting key are fixed for its lifetime.
+
+| Validation outcome | Tier applied | Behaviour on cap exceeded |
+|---|---|---|
+| No `Authorization` header / non-PG bearer | Default | `413 Payload Too Large` |
+| PKG returns `2xx` with tenant id | API-key | `413 Payload Too Large` (at 100 GB) |
+| PKG returns `401`/`403` (unknown or expired key) | Default | `413 Payload Too Large` |
+| PKG unreachable for the full retry budget | Default + warning | **`503 Service Unavailable`** when the upload exceeds the default 5 GB cap; `413` otherwise behaviour matches default |
+
+The PKG retry budget at `init` is 30 seconds with exponential backoff (250 ms → 5 s ceiling). Authoritative responses (`2xx` with body, `401`, `403`) short-circuit the retry loop. Connection errors and `5xx` are retried until the budget is exhausted.
+
+The 503 response distinguishes "we couldn't tell whether you should have gotten the higher tier" from the regular 413 ("you're over your tier's cap"). Smaller uploads degrade silently to the default tier with a warning logged on the server, so transient PKG outages don't block uploads that would have fit anyway.
+
+The legacy `X-Api-Key` header is no longer recognised; older clients that still send it are treated as default tier.
+
+<small>[Source: src/main.rs](https://github.com/encryption4all/cryptify/blob/main/src/main.rs)</small>
 
 ## API
 

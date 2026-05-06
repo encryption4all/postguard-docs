@@ -194,6 +194,8 @@ The sender proves their email address via Yivi, just like the recipient does dur
 ### API key signing (PostGuard for Business)
 For automated or server-side encryption, an API key replaces the Yivi step. The organization operating the sender's application is trusted to authenticate the sender through its own mechanisms.
 
+The same API key also unlocks the higher upload-quota tier on Cryptify (100 GB/upload, 100 GB rolling) when the encrypted payload is delivered through Cryptify. The SDK attaches `Authorization: Bearer <apiKey>` to every upload request automatically; Cryptify forwards the bearer to PKG for validation. See [Upload limits](/repos/cryptify#upload-limits) on the Cryptify page.
+
 When the recipient decrypts, the SDK returns a `sender` field with type `FriendlySender` containing the verified identity attributes of the sender. The Thunderbird addon extracts sender attributes to build identity badges:
 
 ```ts
