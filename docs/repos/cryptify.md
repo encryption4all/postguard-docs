@@ -29,11 +29,12 @@ Configuration parameters:
 | `allowed_origins` | Regex pattern for CORS allowed origins | `^https?://(localhost\|127\\.0\\.0\\.1)(:[0-9]+)?$` |
 | `pkg_url` | URL of the PostGuard PKG server | `http://postguard-pkg:8087` |
 | `chunk_size` | Maximum size in bytes of a single upload chunk. Defaults to `5000000` (5 MB) | `5000000` |
+| `session_ttl_secs` | Idle TTL for an in-flight upload session, in seconds. The eviction deadline resets on each successful chunk PUT or `/status` call. Defaults to `3600` (60 minutes) | `3600` |
 | `usage_db` | Path to the SQLite database used for upload usage accounting | `/app/data/usage.db` |
 
 The `chunk_size` setting caps the size of each `PUT /fileupload/{uuid}` body. Clients (such as `@e4a/pg-js` and the PostGuard website) use the same value for their upload chunks, so increasing it server-side without updating the client default will not produce larger chunks on its own.
 
-<small>[Source: src/config.rs](https://github.com/encryption4all/cryptify/blob/a31dbf1bdff1d2a8776a15a1581f3d48c89f4f9d/src/config.rs)</small>
+<small>[Source: src/config.rs#L15-L53](https://github.com/encryption4all/cryptify/blob/4c30e539a04be1dc08cc1704de35f1ad4320c5af/src/config.rs#L15-L53)</small>
 
 ## Upload limits
 
@@ -95,6 +96,7 @@ Cryptify exposes a file upload/download API. An OpenAPI 3.0 specification is ava
 - `POST /fileupload/init`: Initialize a multipart file upload. The JSON body takes `recipient`, `mailContent`, `mailLang`, `confirm`, and the optional `notifyRecipients`.
 - `PUT /fileupload/{uuid}`: Upload a file chunk (use `Content-Range` header for chunked uploads).
 - `POST /fileupload/finalize/{uuid}`: Finalize the upload (sends the recipient notification email if `notifyRecipients` was `true` on init).
+- `GET /fileupload/{uuid}/status`: Read rolling-token state to resume an in-flight upload across a page refresh or tab crash. Authenticated via `X-Recovery-Token`.
 - `GET /filedownload/{uuid}`: Download a file.
 
 ### `POST /fileupload/init` request body
@@ -110,6 +112,66 @@ Cryptify exposes a file upload/download API. An OpenAPI 3.0 specification is ava
 The `notifyRecipients` field was added in cryptify 0.9 (see [encryption4all/cryptify#135](https://github.com/encryption4all/cryptify/pull/135)). Direct API callers that omit it keep the original notify-on-finalize behaviour. SDK callers (`@e4a/pg-js` 1.2.0+, `E4A.PostGuard` 0.3.0+) send `false` explicitly so the silent-by-default semantics hold regardless of the cryptify version on the other end.
 
 <small>[Source: api-description.yaml#L33-L72](https://github.com/encryption4all/cryptify/blob/723c8db10420180e50a5d97bb852794683c9544d/api-description.yaml#L33-L72)</small>
+
+### `POST /fileupload/init` response body
+
+The init response is JSON and includes the upload UUID and a recovery token:
+
+| Field | Type | Description |
+|---|---|---|
+| `uuid` | string (uuid) | Upload identifier used in subsequent chunk PUTs and finalize. |
+| `recovery_token` | string (hex, 32 bytes) | Bearer credential for `GET /fileupload/{uuid}/status`. Clients should store it alongside the UUID (for example in IndexedDB) and present it in an `X-Recovery-Token` header to rehydrate after a page refresh, tab crash, or navigate-away-and-back. |
+
+The `cryptifytoken` response header carries the initial rolling token for the first chunk PUT.
+
+<small>[Source: api-description.yaml#L82-L103](https://github.com/encryption4all/cryptify/blob/4c30e539a04be1dc08cc1704de35f1ad4320c5af/api-description.yaml#L82-L103)</small>
+
+### `GET /fileupload/{uuid}/status`
+
+Returns the rolling-token state of an in-flight upload so a client that lost track of the session can resume. The response body has `uploaded` (bytes committed so far), `cryptify_token` (the value to send as `cryptifytoken` on the next chunk PUT), and once at least one chunk has been committed, `prev_token` and `prev_offset` for the idempotent-retry path described below.
+
+Authentication uses the `X-Recovery-Token` header issued at init. The token is compared in constant time:
+
+- Missing or empty header: `401`.
+- A token that does not match the stored value: `404` with the same `upload_session_not_found` body as a real unknown UUID. The two cases are deliberately collapsed so callers cannot probe for live UUIDs by varying the token.
+
+A successful call also resets the session's idle eviction deadline, so the next chunk PUT will not 404 because the rehydrate window aged out.
+
+If two clients hold the same UUID and recovery token (two open tabs, say), there is no server-side lease. The first chunk PUT to land wins and the second sees a 4xx as soon as it tries to advance past the now-stale state.
+
+<small>[Source: api-description.yaml#L258-L319](https://github.com/encryption4all/cryptify/blob/4c30e539a04be1dc08cc1704de35f1ad4320c5af/api-description.yaml#L258-L319)</small>
+
+### Missing-upload-session 404 body
+
+`PUT /fileupload/{uuid}`, `POST /fileupload/finalize/{uuid}`, and `GET /fileupload/{uuid}/status` return a JSON body on 404. The status code is unchanged, so older clients see the same wire behaviour:
+
+```json
+{
+  "error": "upload_session_not_found",
+  "uuid": "…",
+  "reason": "expired_or_unknown"
+}
+```
+
+`reason` is one of:
+
+- `expired_or_unknown`: the session was evicted after its idle TTL or never existed. Clients cannot tell these apart, by design.
+- `invalid_uuid`: the path UUID is malformed.
+- `file_missing`: the in-memory session exists but the on-disk file is gone (server-state inconsistency).
+
+Clients should not retry — start a new upload via `/fileupload/init`.
+
+<small>[Source: api-description.yaml#L444-L472](https://github.com/encryption4all/cryptify/blob/4c30e539a04be1dc08cc1704de35f1ad4320c5af/api-description.yaml#L444-L472)</small>
+
+### Idempotent chunk retry
+
+A chunk PUT whose response was lost in flight can be safely retried. The client re-issues the request with the *previous* `cryptifytoken` (the value sent on the failed attempt), the same `Content-Range`, and the same body bytes. The server matches the request against the cached `(prev_token, offset, length, sha256)` of the most recently committed chunk and replays the previously returned `cryptifytoken` without rewriting the file or double-counting against quotas.
+
+If the request looks like a retry but the body bytes differ, the server responds 400. Clients must not retry the same offset with different bytes. Retries are only honoured for the most recently committed chunk; a client that has fallen behind by more than one chunk must start a new upload.
+
+The `prev_token` and `prev_offset` fields on `GET /fileupload/{uuid}/status` exist to feed exactly this path after a refresh.
+
+<small>[Source: api-description.yaml#L109-L124](https://github.com/encryption4all/cryptify/blob/4c30e539a04be1dc08cc1704de35f1ad4320c5af/api-description.yaml#L109-L124)</small>
 
 ## Development
 
