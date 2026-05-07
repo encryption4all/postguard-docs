@@ -79,6 +79,34 @@ const result = await opened.decrypt({
 
 *Provide either `element` or `session`. If neither is provided, the SDK throws a `DecryptionError`.
 
+## Retries and resumable downloads
+
+The download GET retries transient failures using the same `retry` config as uploads — see [Encryption — Retry options](/sdk/js-encryption#retry-options) for the full table and defaults.
+
+A mid-stream failure (network drop, idle timeout) does not start over from byte zero. The SDK reissues the GET with a `Range: bytes=<received>-` header and splices the resumed body onto what the consumer already saw. The retry counter is shared across resumes, so a flapping connection that delivers some bytes per attempt still exhausts the budget rather than looping forever.
+
+```ts
+const pg = new PostGuard({
+  pkgUrl, cryptifyUrl,
+  retry: {
+    onRetry: ({ attempt, maxAttempts, nextDelayMs }) => {
+      ui.showRetry(attempt, maxAttempts, nextDelayMs);
+    },
+  },
+});
+
+const result = await pg.open({ uuid }).decrypt({ element: '#yivi-web-form' });
+result.download();
+```
+
+A resume is only accepted when Cryptify replies `206 Partial Content` with a `Content-Range` whose start byte matches the requested offset. A `200 OK` on a resume request is treated as fail-not-retry — some intermediaries (caching proxies, misconfigured CDNs) silently ignore `Range` and return the full body from byte zero, which would corrupt the decoded stream. The SDK surfaces the mismatch as a `NetworkError` so the retry loop short-circuits.
+
+<small>[Source: cryptify.ts#L238-L277](https://github.com/encryption4all/postguard-js/blob/a60716e0b4eaaed0f3763a2eebbcf6c39fc0560d/src/api/cryptify.ts#L238-L277)</small>
+
+::: warning Behaviour change in v1.6
+The internal `downloadFileWithRetry` helper now returns its `ReadableStream` synchronously instead of via a `Promise`. Stream-level errors (including the no-more-retries terminal error) surface on the consumer's first `read()`, not as a function-level rejection. Callers using the public `pg.open({ uuid }).decrypt(...)` API are unaffected — the SDK consumes the stream internally and a single `await` still surfaces the same errors. Only direct consumers of `downloadFileWithRetry` need to adjust.
+:::
+
 ## Recipient selection
 
 When the ciphertext was encrypted for multiple recipients, the SDK needs to know which recipient key to use. Pass the `recipient` parameter with the email address of the intended recipient. If there is only one recipient in the ciphertext, the parameter can be omitted.
