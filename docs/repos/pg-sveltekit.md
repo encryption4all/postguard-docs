@@ -121,7 +121,7 @@ export const load: PageServerLoad = async () => {
 };
 ```
 
-<small>[Source: +page.server.ts](https://github.com/encryption4all/postguard-examples/blob/2b29c1ba18/pg-sveltekit/src/routes/send/+page.server.ts)</small>
+<small>[Source: +page.server.ts](https://github.com/encryption4all/postguard-examples/blob/2b29c1ba18be39d89380a9dd8dd4d3370e17e0b2/pg-sveltekit/src/routes/send/+page.server.ts)</small>
 
 The send page uses Svelte 5 reactive state to track progress and handle errors:
 
@@ -131,6 +131,7 @@ async function handleSend() {
 
   sendState = 'encrypting';
   progress = 0;
+  errorMessage = '';
   abortController = new AbortController();
 
   try {
@@ -151,12 +152,13 @@ async function handleSend() {
     } else {
       sendState = 'error';
       errorMessage = e instanceof Error ? e.message : String(e);
+      console.error('Encryption error:', e);
     }
   }
 }
 ```
 
-<small>[Source: +page.svelte#L36-L65](https://github.com/encryption4all/postguard-examples/blob/2b29c1ba18/pg-sveltekit/src/routes/send/+page.svelte#L36-L65)</small>
+<small>[Source: +page.svelte#L36-L65](https://github.com/encryption4all/postguard-examples/blob/2b29c1ba18be39d89380a9dd8dd4d3370e17e0b2/pg-sveltekit/src/routes/send/+page.svelte#L36-L65)</small>
 
 ## Decrypt Files
 
