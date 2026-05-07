@@ -86,7 +86,7 @@ The 503 response distinguishes "we couldn't tell whether you should have gotten 
 
 The legacy `X-Api-Key` header is no longer recognised; older clients that still send it are treated as default tier.
 
-<small>[Source: src/main.rs](https://github.com/encryption4all/cryptify/blob/main/src/main.rs)</small>
+<small>[Source: src/main.rs](https://github.com/encryption4all/cryptify/blob/2a6dac195ef4efae8758084aaacab04bc9c94206/src/main.rs)</small>
 
 ## API
 
