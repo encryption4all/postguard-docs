@@ -60,11 +60,12 @@ IBS Master Key Pair (lives on the PKG server)
 
 ## Session Flow
 
-A typical PostGuard session works as follows. Red actions require user interaction; all other actions are automatic.
+A typical PostGuard session works as follows. Steps that require user interaction (Yivi authentication on a phone, scanning the QR code) are highlighted in red in the diagram below; all other steps are automatic. The numbered list after the diagram is the authoritative description — readers can follow either.
 
-<p align="center">
-  <img src="/postguard-flow.png" alt="PostGuard session flow"/>
-</p>
+<figure class="pg-figure" aria-describedby="postguard-flow-desc">
+  <img src="/postguard-flow.png" alt="Sequence diagram of a PostGuard session between Alice (sender), Bob (recipient), the PKG, and the Yivi server."/>
+  <figcaption id="postguard-flow-desc">PostGuard session flow. The numbered walkthrough below the figure is the authoritative reference; user-interaction steps (5–7) correspond to the red-highlighted arrows in the diagram.</figcaption>
+</figure>
 
 0. The PKG generates a master key pair.
 1. Alice's client retrieves the public master key from the PKG.

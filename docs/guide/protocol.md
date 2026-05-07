@@ -4,11 +4,12 @@ This page describes the PostGuard encryption protocol in detail. It covers the c
 
 ## Software Components
 
-The diagram below shows how PostGuard's software components relate to each other. Rust components are shown in orange, JavaScript/TypeScript in blue. The arithmetic layer (elliptic curve implementations) is developed externally.
+The diagram below shows how PostGuard's software components relate to each other. Components are grouped by implementation language: Rust components (`pg-core`, `pg-pkg`, `ibe`, `ibs`, `pg-curve`) are shown in orange, and JavaScript/TypeScript components (`pg-wasm`, `pg-js`, the browser/Node bindings) in blue. The arithmetic layer (elliptic curve implementations) is developed externally.
 
-<p align="center">
-  <img src="/components-overview.png" alt="Overview of PostGuard's software components" />
-</p>
+<figure class="pg-figure">
+  <img src="/components-overview.png" alt="Overview of PostGuard's software components, grouped by language and dependency direction." />
+  <figcaption>PostGuard software components and their dependencies (Rust components in orange, JavaScript/TypeScript in blue).</figcaption>
+</figure>
 
 ## Cryptographic Primitives
 
@@ -63,17 +64,19 @@ PostGuard uses a Sign-then-Encrypt (StE) composition. First, a private signature
 
 Before encrypting or signing, clients retrieve keys from the PKG. The following diagram shows a signing key retrieval flow. Decryption key retrieval works the same way, except the PKG uses IBE.KeyGen(*msk_e*, *id*) instead of IBS.KeyGen(*msk_s*, *id*). Once the JWT is retrieved, subsequent keys can be retrieved using that same JWT.
 
-<p align="center">
-  <img src="/key-retrieval.png" alt="Key retrieval sequence diagram" />
-</p>
+<figure class="pg-figure" aria-describedby="key-retrieval-desc">
+  <img src="/key-retrieval.png" alt="Sequence diagram showing the key retrieval flow between client, identity provider, and PKG." />
+  <figcaption id="key-retrieval-desc">Signing key retrieval flow. The client authenticates with the identity provider, receives a JWT proving identity attributes, and exchanges it at the PKG for an IBS signing key. Decryption key retrieval is identical except the PKG runs <code>IBE.KeyGen(<em>msk_e</em>, <em>id</em>)</code> instead of <code>IBS.KeyGen(<em>msk_s</em>, <em>id</em>)</code>. Once obtained, the same JWT can be reused for subsequent key requests.</figcaption>
+</figure>
 
 ### Sealing and Unsealing
 
 The full encryption and decryption protocol is shown below.
 
-<p align="center">
-  <img src="/seal-unseal.png" alt="PostGuard encryption/decryption sequence diagram" />
-</p>
+<figure class="pg-figure" aria-describedby="seal-unseal-desc">
+  <img src="/seal-unseal.png" alt="Sequence diagram of the full PostGuard sealing and unsealing protocol between sender, receiver(s), and PKG." />
+  <figcaption id="seal-unseal-desc">Full Sign-then-Encrypt protocol. The sender retrieves signing keys from the PKG, encapsulates a shared secret for all receivers, signs the header and message, and transmits the ciphertext. Each receiver retrieves their decryption key, verifies the header signature, decapsulates the shared secret, and decrypts the message — see the <strong>Sender</strong> and <strong>Receiver</strong> step lists below for the precise sequence.</figcaption>
+</figure>
 
 **PKG** setup:
 
@@ -186,9 +189,10 @@ PostGuard ciphertexts follow a binary wire format. The format has two modes: in-
 
 In-memory processing is used for small data that can be processed fully in memory. It does not rely on constructions with complex security proofs like the OAE2 STREAM construction [[8]](#references).
 
-<p align="center">
-  <img src="/wire-format-inmemory.png" alt="Wire format in-memory mode" />
-</p>
+<figure class="pg-figure" aria-describedby="wire-inmemory-desc">
+  <img src="/wire-format-inmemory.png" alt="Layout of the in-memory PostGuard wire format showing preamble, header, header signature, public signing identity, and symmetric ciphertext." />
+  <figcaption id="wire-inmemory-desc">In-memory wire format layout. Bytes are laid out left-to-right in the order described in the paragraph below: 10-byte preamble, header (≤1 MiB), header signature <em>σ_h</em>, public signing identity <em>id_s^p</em>, and symmetric ciphertext <em>ct_sym</em> with 16-byte authentication tag.</figcaption>
+</figure>
 
 The preamble is 10 bytes: a 4-byte prelude (magic number), 2-byte version, and 4-byte header length. The header contains the per-recipient ciphertexts and hidden policies, serialized with bincode (max 1 MiB). Following the header is the header signature *σ_h* and public signing identity *id_s^p*. The ciphertext *ct_sym* contains the symmetrically encrypted message concatenated with the private signature and identity, plus a 16-byte authentication tag *τ*.
 
@@ -204,9 +208,10 @@ This can be implemented efficiently by cloning the hash state after absorbing a 
 
 The segment counter and a "last segment" byte are appended to prevent outputting valid signatures on prefixes of the full message. The private signing identity *id_s^s* is prepended before the first message segment (*m₀*). The segment and segment signature are then encrypted using the OAE2 AE scheme.
 
-<p align="center">
-  <img src="/wire-format-streaming.png" alt="Wire format in streaming mode" />
-</p>
+<figure class="pg-figure" aria-describedby="wire-streaming-desc">
+  <img src="/wire-format-streaming.png" alt="Layout of the streaming PostGuard wire format, showing the preamble, header, header signature, public signing identity, and a sequence of encrypted message segments each carrying its own per-segment signature." />
+  <figcaption id="wire-streaming-desc">Streaming wire format layout. After the same preamble/header/header-signature/identity prefix as the in-memory mode, the message is split into segments <em>m₀ || … || m_n</em>; each segment is encrypted under OAE2 together with its per-segment signature <em>σ_{m_i}</em>, the segment counter, and a "last segment" byte. The private signing identity <em>id_s^s</em> is prepended to the first segment.</figcaption>
+</figure>
 
 ## Email Format
 

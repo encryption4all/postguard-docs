@@ -1,0 +1,17 @@
+/* Centered figure for protocol/architecture diagrams.
+   Replaces obsolete <p align="center"> while keeping the same visual layout. */
+figure.pg-figure {
+  margin: 1.5rem auto;
+  text-align: center;
+}
+
+figure.pg-figure img {
+  max-width: 100%;
+  height: auto;
+}
+
+figure.pg-figure figcaption {
+  margin-top: 0.5rem;
+  font-size: 0.9em;
+  color: var(--vp-c-text-2);
+}
