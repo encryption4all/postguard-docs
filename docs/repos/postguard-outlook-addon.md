@@ -2,7 +2,7 @@
 
 [GitHub](https://github.com/encryption4all/postguard-outlook-addon) · TypeScript · Outlook Add-in
 
-Identity-based email encryption add-in for Microsoft Outlook. Built as an Office Web Add-in using Office.js, PostGuard WASM, and Yivi authentication. Targets new Outlook on Windows (WebView2) and Outlook on macOS, Mailbox 1.12+.
+Identity-based email encryption add-in for Microsoft Outlook. Built as an Office Web Add-in using Office.js, PostGuard WASM, and Yivi authentication. Targets new Outlook on Windows (WebView2), Outlook on the web, and Outlook on macOS (taskpane flow only), Mailbox 1.12+. The one-click OnSend flow runs on Windows and the web; Outlook for Mac native uses the taskpane "Encrypt & Send" button instead. See the per-platform matrix below.
 
 ## How It Works
 
@@ -15,9 +15,23 @@ The Outlook add-in uses Office JS APIs instead of WebExtension APIs:
 - Manifest: XML-based (`manifest.xml`) instead of `manifest.json`.
 - Taskpane: read-mode decryption UI (`src/taskpane/read-view.ts`) and compose-mode policy editor (`src/taskpane/compose-view.ts`, `src/taskpane/policy-editor.ts`). The taskpane shell (`src/taskpane/taskpane.ts`) routes between views.
 - Yivi dialog: a separate page (`src/yivi-dialog/yivi-dialog.{ts,html}`) hosted at `yivi-dialog.html`. It runs pg-js plus the Yivi QR widget in its own WebView2 window so encryption can happen during the Send pipeline, where the taskpane is not available.
-- Smart Alerts handler: `src/launchevent/launchevent.ts` registers the `OnMessageSend` event. It collects the message body and attachments, opens the Yivi dialog with `displayDialogAsync`, and writes the encrypted result back into the outgoing item before releasing Send.
+- Smart Alerts handler: `src/launchevent/launchevent.ts` registers the `OnMessageSend` event. It collects the message body and attachments, opens the Yivi dialog with `displayDialogAsync`, and writes the encrypted result back into the outgoing item before releasing Send. On `Office.context.platform === Office.PlatformType.Mac` the handler exits early with a Smart Alert pointing the user at the taskpane "Encrypt & Send" button. `displayDialogAsync` from a launchevent runtime is broken on Outlook for Mac native (OfficeDev/office-js #3138, #3085, #5681).
 - Event handlers: `OnMessageSend` for one-click encryption. Read-mode auto-decryption runs from the taskpane when an encrypted message is opened.
 - Shared helpers under `src/lib/`: `office-helpers.ts` (Office.js wrappers), `mime.ts` (MIME assembly and parsing), `graph-client.ts` (Graph API for fetching the full sent item), `pkg-client.ts` (PKG endpoints and host config), `auth.ts` (PKG bearer JWT exchange), `i18n.ts`, `encoding.ts`, `attributes.ts`, `storage.ts`, `types.ts`, and `dialog-chunk.ts` (chunked `messageChild` / `messageParent` protocol).
+
+### Per-platform behaviour
+
+The OnSend flow is not uniform across Outlook clients. The launchevent handler picks a path based on `Office.context.platform` and the browser, after [postguard-outlook-addon#29](https://github.com/encryption4all/postguard-outlook-addon/pull/29):
+
+| Client | Behaviour |
+|---|---|
+| Outlook for Mac (native) | OnSend is blocked with a Smart Alert pointing at the taskpane "Encrypt & Send" button. `displayDialogAsync` from a launchevent runtime does not work there (OfficeDev/office-js #3138, #3085, #5681). |
+| Outlook on the web (Chrome / Edge / Firefox) | One-click send. Optimistic `displayDialogAsync` with `promptBeforeOpen: false`. |
+| Outlook on the web (Safari, fresh) | The optimistic attempt fails (popup blocked), the handler retries with `promptBeforeOpen: true`, the user clicks Allow on the Office prompt, and the dialog opens. The dialog shows an inline hint pointing at Safari → Settings → Websites → Pop-ups so the user can opt out of the recurring prompt. |
+| Outlook on the web (Safari, popup permission granted) | Back to one-click. |
+| Outlook on Windows | One-click send. |
+
+The repo's own [`docs/outlook-quirks.md`](https://github.com/encryption4all/postguard-outlook-addon/blob/master/docs/outlook-quirks.md) carries the longer-form notes on each case.
 
 ### Yivi dialog and the Send flow
 
@@ -89,7 +103,7 @@ The repo keeps a running log of Office.js and Outlook surprises in [`docs/outloo
 ### Prerequisites
 
 - Node.js 20+
-- Microsoft Outlook (new Outlook on Windows, or Outlook on macOS)
+- Microsoft Outlook (new Outlook on Windows, Outlook on the web, or Outlook on macOS)
 
 ### Setup
 
