@@ -8,7 +8,7 @@
     "docs:preview": "vitepress preview docs"
   },
   "devDependencies": {
-    "@e4a/pg-js": "^1.5.0",
+    "@e4a/pg-js": "^1.6.0",
     "vitepress": "^1.6.4"
   },
   "dependencies": {
