@@ -89,6 +89,43 @@ Requires `cryptifyUrl` to be set in the constructor.
 
 *Provide either `files` or `data`, not both.
 
+### Retry options
+
+Pass `retry` on the `PostGuardConfig` to tune how chunk PUTs and downloads handle transient failures. Defaults are sensible — supply a partial object to override only what you need.
+
+```ts
+const pg = new PostGuard({
+  pkgUrl: 'https://pkg.staging.yivi.app',
+  cryptifyUrl: 'https://fileshare.staging.yivi.app',
+  retry: {
+    maxAttempts: 5,
+    chunkTimeoutMs: 60_000,
+    onRetry: ({ attempt, maxAttempts, nextDelayMs }) => {
+      console.log(`retrying in ${nextDelayMs} ms (attempt ${attempt} of ${maxAttempts})`);
+    },
+  },
+});
+```
+
+<small>[Source: retry.ts#L3-L27](https://github.com/encryption4all/postguard-js/blob/a60716e0b4eaaed0f3763a2eebbcf6c39fc0560d/src/util/retry.ts#L3-L27)</small>
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `maxAttempts` | `number` | `5` | Total attempts including the first one |
+| `initialDelayMs` | `number` | `500` | Delay before the first retry |
+| `maxDelayMs` | `number` | `30_000` | Cap on the pre-jitter exponential delay |
+| `multiplier` | `number` | `2` | Multiplier applied between attempts |
+| `chunkTimeoutMs` | `number` | `60_000` | Per-attempt timeout for a chunk PUT |
+| `finalizeTimeoutMs` | `number` | `120_000` | Per-attempt timeout for the finalize call |
+| `downloadTimeoutMs` | `number` | `0` (off) | Per-attempt timeout for the download GET. `0` means no per-attempt timeout — the retry budget bounds it instead |
+| `onRetry` | `(event: RetryEvent) => void` | `undefined` | Fires after a retriable failure, before the backoff delay |
+
+`RetryEvent` carries `attempt` (1-indexed, the attempt that just failed), `maxAttempts`, the underlying `error`, and `nextDelayMs`. Use it to drive a "retrying… (attempt N of M)" indicator.
+
+What gets retried: 5xx responses, fetch-level network errors (`TypeError` from `Failed to fetch`), and per-attempt timeout aborts. What does not: 4xx responses, `UploadSessionExpiredError` (see [Error Handling](/sdk/js-errors#uploadsessionexpirederror)), and caller-driven aborts via your `AbortSignal`. `initUpload` and `finalizeUpload` are deliberately not retried — both are session-defining steps where a silent retry could mask a server-side state mismatch.
+
+The same `retry` config governs downloads. See [Decryption — Retries and resumable downloads](/sdk/js-decryption#retries-and-resumable-downloads).
+
 ### Notify options
 
 The upload is silent by default. Both recipient and sender mails are opt-in. Pass `notify` to enable either or both.

@@ -8,6 +8,7 @@ The SDK exports a hierarchy of error classes. All errors extend `PostGuardError`
 Error
   └── PostGuardError
         ├── NetworkError
+        │     └── UploadSessionExpiredError
         ├── YiviNotInstalledError
         ├── YiviSessionError
         └── DecryptionError
@@ -46,6 +47,40 @@ Thrown when:
 | `404` | Resource not found (e.g. invalid UUID) | Check the UUID |
 | `429` | Rate limited | Back off and retry |
 | `500` | Server error | Retry later |
+
+## `UploadSessionExpiredError`
+
+A subclass of `NetworkError`. Thrown when Cryptify reports that the upload session is no longer known to the server — the session sat idle past its TTL, the server was restarted, or the path UUID is malformed. Distinct from `NetworkError` so retry policies short-circuit instead of burning the budget on something that will never recover.
+
+Surfaced from both chunk PUT and finalize paths, parsed from Cryptify's structured 404 body (`upload_session_not_found`).
+
+### Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `message` | `string` | `Upload session <uuid> is no longer known to the server (<reason>)` |
+| `status` | `number` | Always `404` |
+| `body` | `string` | Raw 404 response body |
+| `uuid` | `string` | The upload UUID that expired |
+| `reason` | `string` | Cryptify's structured reason: `'expired_or_unknown'`, `'invalid_uuid'`, `'file_missing'` |
+
+```ts
+import { UploadSessionExpiredError } from '@e4a/pg-js';
+
+try {
+  await pg.encrypt({ files, recipients, sign }).upload();
+} catch (e) {
+  if (e instanceof UploadSessionExpiredError) {
+    showMessage('Your upload session expired. Please start over.');
+    return;
+  }
+  throw e;
+}
+```
+
+<small>[Source: errors.ts#L31-L40](https://github.com/encryption4all/postguard-js/blob/a60716e0b4eaaed0f3763a2eebbcf6c39fc0560d/src/errors.ts#L31-L40)</small>
+
+The user must start a new upload — there is no resume path once a session is gone. Catch this case before a generic `NetworkError` branch so the message is specific.
 
 ## `YiviNotInstalledError`
 
