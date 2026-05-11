@@ -15,21 +15,42 @@ The Outlook add-in uses Office JS APIs instead of WebExtension APIs:
 - Manifest: XML-based (`manifest.xml`) instead of `manifest.json`.
 - Taskpane: read-mode decryption UI (`src/taskpane/read-view.ts`) and compose-mode policy editor (`src/taskpane/compose-view.ts`, `src/taskpane/policy-editor.ts`). The taskpane shell (`src/taskpane/taskpane.ts`) routes between views.
 - Yivi dialog: a separate page (`src/yivi-dialog/yivi-dialog.{ts,html}`) hosted at `yivi-dialog.html`. It runs pg-js plus the Yivi QR widget in its own WebView2 window so encryption can happen during the Send pipeline, where the taskpane is not available.
-- Smart Alerts handler: `src/launchevent/launchevent.ts` registers the `OnMessageSend` event. It collects the message body and attachments, opens the Yivi dialog with `displayDialogAsync`, and writes the encrypted result back into the outgoing item before releasing Send. On `Office.context.platform === Office.PlatformType.Mac` the handler exits early with a Smart Alert pointing the user at the taskpane "Encrypt & Send" button. `displayDialogAsync` from a launchevent runtime is broken on Outlook for Mac native (OfficeDev/office-js #3138, #3085, #5681).
-- Event handlers: `OnMessageSend` for one-click encryption. Read-mode auto-decryption runs from the taskpane when an encrypted message is opened.
-- Shared helpers under `src/lib/`: `office-helpers.ts` (Office.js wrappers), `mime.ts` (MIME assembly and parsing), `graph-client.ts` (Graph API for fetching the full sent item), `pkg-client.ts` (PKG endpoints and host config), `auth.ts` (PKG bearer JWT exchange), `i18n.ts`, `encoding.ts`, `attributes.ts`, `storage.ts`, `types.ts`, and `dialog-chunk.ts` (chunked `messageChild` / `messageParent` protocol).
+- Launchevent runtime: `src/launchevent/launchevent.ts` registers two events. `OnNewMessageCompose` fires when a new compose, reply, or forward opens — it seeds the per-draft `x-pg-encrypt-on-send` header from the mailbox-wide default and paints the persistent in-message banner. `OnMessageSend` reads only that header to decide whether to open the Yivi dialog with `displayDialogAsync`, write the encrypted result back into the outgoing item, and release Send. On `Office.context.platform === Office.PlatformType.Mac` the send handler exits early with a Smart Alert pointing the user at the taskpane "Encrypt & Send" button; `displayDialogAsync` from a launchevent runtime is broken on Outlook for Mac native (OfficeDev/office-js #3138, #3085, #5681).
+- Settings view: `src/taskpane/settings-view.ts` (taskpane gear icon, top-right). Exposes the mailbox-wide encryption default, the optimistic-dialog opt-in, and Yivi sign-attribute prefills. All values are written to `roamingSettings` so the launchevent runtime can read them too.
+- Shared helpers under `src/lib/`: `office-helpers.ts` (Office.js wrappers including the notification banner helpers), `settings.ts` (typed roaming-settings keys shared by taskpane and launchevent), `mime.ts` (MIME assembly and parsing), `graph-client.ts` (Graph API for fetching the full sent item), `pkg-client.ts` (PKG endpoints and host config), `auth.ts` (PKG bearer JWT exchange), `i18n.ts`, `encoding.ts`, `attributes.ts`, `storage.ts`, `types.ts`, and `dialog-chunk.ts` (chunked `messageChild` / `messageParent` protocol).
+
+### Encryption defaults and per-draft control
+
+PostGuard is opt-in. New drafts default to unencrypted, and the user opts in either from the compose toggle or from the Settings view.
+
+Two roaming settings and one internet header carry the state across the taskpane and the launchevent runtime:
+
+- `pg.encryptionEnabled` (default `false`) — mailbox-wide default. Settings view writes it; `OnNewMessageCompose` reads it once per draft to seed the header below. Changing this only affects future drafts.
+- `x-pg-encrypt-on-send` (`"true"` / `"false"`) — per-draft header on the compose item. The compose toggle writes this header; `OnMessageSend` reads only this header at send time. A draft the user explicitly toggled keeps its choice even if the global default changes later.
+- Persistent compose banner — `OnNewMessageCompose` paints a notification message on the draft that reads "PostGuard is on…" or "PostGuard is off — this message will be sent unencrypted." It is updated in place by the compose toggle, so the user always sees the current state of this specific draft without opening the taskpane.
+
+The send handler is fail-closed once the header is read as `"true"` and fail-open otherwise:
+
+- Header reads `"true"` → a `committedToEncrypt` latch flips. Any subsequent failure (encrypt error, the ~4½-minute Smart Alert timeout, an unhandled exception in the async callback) blocks the send with a Smart Alert. PostGuard never silently sends a "supposed to be encrypted" email in cleartext.
+- Header reads `"false"`, is absent, or cannot be read → release Send immediately. A PostGuard outage cannot block an unencrypted send.
+
+### Settings view
+
+The taskpane has a gear icon (top-right) that opens a Settings view backed by `roamingSettings`. Two toggles and three prefill fields:
+
+- *Encrypt new messages by default* — writes `pg.encryptionEnabled`.
+- *Skip the "open a dialog" confirmation* — writes `pg.allowOptimisticDialog`. Off by default. Enabling it lets the launchevent try to open the Yivi dialog directly; if that attempt is blocked (Safari without site-level popup permission, for example), the handler retries once with the prompt so the send is not lost.
+- Sign-attribute prefills for `fullname`, `dateofbirth`, and `mobilenumber`. Filled values are sent to Yivi as mandatory disclosures; blank values are sent as `optional: true` so the user can disclose them in the Yivi app or skip.
 
 ### Per-platform behaviour
 
-The OnSend flow is not uniform across Outlook clients. The launchevent handler picks a path based on `Office.context.platform` and the browser, after [postguard-outlook-addon#29](https://github.com/encryption4all/postguard-outlook-addon/pull/29):
+The OnSend flow is not uniform across Outlook clients. The launchevent handler picks a path based on `Office.context.platform`, the browser, and the `pg.allowOptimisticDialog` setting, after [postguard-outlook-addon#29](https://github.com/encryption4all/postguard-outlook-addon/pull/29) and [postguard-outlook-addon#63](https://github.com/encryption4all/postguard-outlook-addon/pull/63):
 
 | Client | Behaviour |
 |---|---|
 | Outlook for Mac (native) | OnSend is blocked with a Smart Alert pointing at the taskpane "Encrypt & Send" button. `displayDialogAsync` from a launchevent runtime does not work there (OfficeDev/office-js #3138, #3085, #5681). |
-| Outlook on the web (Chrome / Edge / Firefox) | One-click send. Optimistic `displayDialogAsync` with `promptBeforeOpen: false`. |
-| Outlook on the web (Safari, fresh) | The optimistic attempt fails (popup blocked), the handler retries with `promptBeforeOpen: true`, the user clicks Allow on the Office prompt, and the dialog opens. The dialog shows an inline hint pointing at Safari → Settings → Websites → Pop-ups so the user can opt out of the recurring prompt. |
-| Outlook on the web (Safari, popup permission granted) | Back to one-click. |
-| Outlook on Windows | One-click send. |
+| Outlook on Windows / on the web (default) | Office shows a "PostGuard wants to open a dialog → Allow" prompt, the user clicks Allow, the Yivi dialog opens. Works reliably on every host including Safari without site-level popup permission, because the Allow click is itself the user gesture that opens the popup. |
+| Outlook on Windows / on the web (`pg.allowOptimisticDialog` on) | One-click send. The handler attempts an optimistic open with `promptBeforeOpen: false`. If the host blocks it (Safari without site-level popup permission), the handler retries once with `promptBeforeOpen: true` so the send still goes through after Allow. |
 
 The repo's own [`docs/outlook-quirks.md`](https://github.com/encryption4all/postguard-outlook-addon/blob/master/docs/outlook-quirks.md) carries the longer-form notes on each case.
 
@@ -37,58 +58,55 @@ The repo's own [`docs/outlook-quirks.md`](https://github.com/encryption4all/post
 
 The OnMessageSend handler opens `yivi-dialog.html` with `Office.context.ui.displayDialogAsync`. The handler and the dialog talk over `messageChild` and `messageParent`, but each frame is capped at about 32KB, so payloads are split with the chunking helper in `src/lib/dialog-chunk.ts`. The dialog announces `ready`, the handler streams the encrypt request, the dialog runs Yivi plus pg-js and posts back `encrypt-result` (or `encrypt-error` / `cancelled`).
 
+The default open path uses `promptBeforeOpen: true` so the user's click on the Office Allow confirmation is itself the fresh user gesture that opens the popup. The `pg.allowOptimisticDialog` Settings toggle flips this to an optimistic open with a single prompted retry on failure:
+
 ```ts
-    Office.context.ui.displayDialogAsync(
-      YIVI_DIALOG_URL,
-      // promptBeforeOpen: false suppresses the "PostGuard is opening
-      // another window" confirmation. Honored because the dialog URL is
-      // on the same origin as the add-in's source location. Requires
-      // Mailbox 1.9 (we require 1.12 in VersionOverridesV1_1).
-      { height: heightPct, width: widthPct, displayInIframe: false, promptBeforeOpen: false },
-      (asyncResult) => {
-        log(`displayDialogAsync status=${asyncResult.status}`);
-        if (asyncResult.status !== Office.AsyncResultStatus.Succeeded) {
-          reject(new Error(`displayDialogAsync failed: ${asyncResult.error?.message}`));
-          return;
-        }
-        const dialog = asyncResult.value;
-        const inbound = new ChunkAssembler();
+  const allowOptimistic = getAllowOptimisticDialog();
+  log(`displayDialogAsync: promptBeforeOpen=${!allowOptimistic} (optimistic=${allowOptimistic})`);
+  let dialog: Office.Dialog;
+  try {
+    dialog = await openDialogAsync(YIVI_DIALOG_URL, {
+      ...baseOptions,
+      promptBeforeOpen: !allowOptimistic,
+    });
+    log(allowOptimistic ? "dialog opened (no prompt)" : "dialog opened (after prompt)");
+  } catch (e) {
+    if (!allowOptimistic) throw e;
+    const msg = (e as { message?: string })?.message ?? String(e);
+    log(`optimistic attempt failed (${msg}); retrying with promptBeforeOpen=true`);
+    dialog = await openDialogAsync(YIVI_DIALOG_URL, {
+      ...baseOptions,
+      promptBeforeOpen: true,
+    });
+    log("dialog opened (after prompt fallback)");
+  }
 ```
 
-<small>[Source: launchevent.ts#L253-L267](https://github.com/encryption4all/postguard-outlook-addon/blob/f602030dafe2f958dabf7bacbf6239c8c65e291b/src/launchevent/launchevent.ts#L253-L267)</small>
+<small>[Source: launchevent.ts#L298-L316](https://github.com/encryption4all/postguard-outlook-addon/blob/2fcc56ec4fc7ec34bb557a4d5de2b3d317d636fa/src/launchevent/launchevent.ts#L298-L316)</small>
 
 The dispatch loop drives the message protocol:
 
 ```ts
-        const dispatch = (body: DialogMessage): void => {
-          log(`dialog → handler: ${body.type}`);
-          switch (body.type) {
-            case "ready": {
-              const chunks = chunkPayload(payload);
-              log(`sending ${chunks.length} chunk(s) to dialog`);
-              for (const c of chunks) {
-                dialog.messageChild(JSON.stringify(c));
-              }
-              break;
-            }
-            case "encrypt-result":
-              settle(() => {
-                closeDialog();
-                resolve(body as unknown as EncryptResult);
-              });
-              break;
-            case "encrypt-error":
-              settle(() => {
-                closeDialog();
-                reject(new Error(String(body.message ?? "Encryption failed")));
-              });
-              break;
-            case "cancelled":
-              settle(() => reject(new Error("Cancelled in dialog")));
-              break;
+    const dispatch = (body: DialogMessage): void => {
+      log(`dialog → handler: ${body.type}`);
+      switch (body.type) {
+        case "ready": {
+          const chunks = chunkPayload(payload);
+          log(`sending ${chunks.length} chunk(s) to dialog`);
+          for (const c of chunks) {
+            dialog.messageChild(JSON.stringify(c));
+          }
+          break;
+        }
+        case "encrypt-result":
+          settle(() => {
+            closeDialog();
+            resolve(body as unknown as EncryptResult);
+          });
+          break;
 ```
 
-<small>[Source: launchevent.ts#L288-L313](https://github.com/encryption4all/postguard-outlook-addon/blob/f602030dafe2f958dabf7bacbf6239c8c65e291b/src/launchevent/launchevent.ts#L288-L313)</small>
+<small>[Source: launchevent.ts#L340-L356](https://github.com/encryption4all/postguard-outlook-addon/blob/2fcc56ec4fc7ec34bb557a4d5de2b3d317d636fa/src/launchevent/launchevent.ts#L340-L356)</small>
 
 The taskpane Yivi flow (compose-mode policy signing, read-mode decryption) is different: there the Yivi QR widget runs inline in the taskpane DOM at `#yivi-web-form` rather than in a popup, because the taskpane is already a long-lived web context.
 
