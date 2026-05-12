@@ -17,6 +17,9 @@ var pg = new PostGuard(new PostGuardConfig
     PkgUrl = "https://pkg.staging.postguard.eu",
     CryptifyUrl = "https://fileshare.staging.postguard.eu"
 });
+// PkgUrl and CryptifyUrl must be absolute https:// URLs.
+// The constructor throws ArgumentException otherwise.
+// Set AllowInsecureUrls = true to permit http://localhost for local dev.
 
 var sealed = pg.Encrypt(new EncryptInput
 {
