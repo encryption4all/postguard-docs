@@ -8,11 +8,11 @@
     "docs:preview": "vitepress preview docs"
   },
   "devDependencies": {
-    "@e4a/pg-js": "^1.6.0",
+    "@e4a/pg-js": "^1.6.2",
     "vitepress": "^1.6.4"
   },
   "dependencies": {
-    "mermaid": "^11.14.0",
+    "mermaid": "^11.15.0",
     "vitepress-plugin-mermaid": "^2.0.17"
   },
   "overrides": {
