@@ -19,10 +19,13 @@ var pg = new PostGuard(new PostGuardConfig
 });
 ```
 
+`PkgUrl` and `CryptifyUrl` must be absolute `https://` URLs. The constructor throws `ArgumentException` for any other scheme (including `http://`, `ftp://`, `ws://`), as well as for relative or empty values. Set `AllowInsecureUrls = true` to permit `http://localhost` during local development.
+
 | Option | Type | Required | Description |
 |---|---|---|---|
-| `PkgUrl` | `string` | Yes | URL of the PKG server |
-| `CryptifyUrl` | `string` | No | URL of the Cryptify file storage service. Required for `UploadAsync()`. |
+| `PkgUrl` | `string` | Yes | URL of the PKG server. Must be an absolute `https://` URL. |
+| `CryptifyUrl` | `string` | No | URL of the Cryptify file storage service. Required for `UploadAsync()`. Must be an absolute `https://` URL. |
+| `AllowInsecureUrls` | `bool` | No | Allow `http://localhost` URLs for local dev. Default `false`. Any non-`https://` value still throws `ArgumentException`. |
 | `Headers` | `Dictionary<string, string>` | No | Custom HTTP headers included in all requests |
 
 ## Encrypt
