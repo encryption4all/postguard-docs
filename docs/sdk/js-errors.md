@@ -80,7 +80,7 @@ try {
 
 <small>[Source: errors.ts#L31-L40](https://github.com/encryption4all/postguard-js/blob/a60716e0b4eaaed0f3763a2eebbcf6c39fc0560d/src/errors.ts#L31-L40)</small>
 
-The user must start a new upload — there is no resume path once a session is gone. Catch this case before a generic `NetworkError` branch so the message is specific.
+Once this error fires, the session is gone and there is no resume path; the user must start a new upload. While the session is still valid, an in-flight upload can be rehydrated with [`resumeUpload`](/sdk/js-encryption#resume-an-interrupted-upload). Catch this case before a generic `NetworkError` branch so the message is specific.
 
 ## `YiviNotInstalledError`
 

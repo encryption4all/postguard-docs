@@ -126,6 +126,52 @@ What gets retried: 5xx responses, fetch-level network errors (`TypeError` from `
 
 The same `retry` config governs downloads. See [Decryption — Retries and resumable downloads](/sdk/js-decryption#retries-and-resumable-downloads).
 
+## Resume an interrupted upload
+
+A long-running upload can be interrupted by a page refresh, tab crash, navigation away, or process restart. The SDK exposes two primitives for rehydrating an in-flight session from Cryptify rather than starting over: the `FileState` type and the `resumeUpload` function.
+
+### `FileState`
+
+`FileState` carries everything Cryptify needs to accept the next chunk for an in-flight upload. The two persistable fields are `uuid` and `recoveryToken`; the rest can be reconstructed by calling `resumeUpload`.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `token` | `string` | Current rolling token sent on the next chunk PUT |
+| `prevToken` | `string \| undefined` | Token from the most recent committed chunk. Used on retry so Cryptify's idempotent-retry path can replay a lost response. `undefined` until the first chunk is committed |
+| `uuid` | `string` | Upload UUID issued at init |
+| `recoveryToken` | `string` | Bearer credential issued by `POST /fileupload/init` (wire field `recovery_token`). Persist alongside `uuid` in consumer-owned storage |
+
+<small>[Source: cryptify.ts#L13-L33](https://github.com/encryption4all/postguard-js/blob/6205fc309aaf954e82937beae723912812604f2e/src/api/cryptify.ts#L13-L33)</small>
+
+### `resumeUpload`
+
+```ts
+import { resumeUpload, type FileState } from '@e4a/pg-js';
+
+const { state, uploaded } = await resumeUpload(
+  cryptifyUrl,
+  uuid,
+  recoveryToken,
+  signal
+);
+```
+
+Calls `GET /fileupload/{uuid}/status` with the `X-Recovery-Token` header and returns `{ state: FileState; uploaded: number }`:
+
+- `cryptify_token` from the response is mapped to `state.token`.
+- `prev_token` is mapped to `state.prevToken` and is omitted before the first committed chunk.
+- `uploaded` is the byte offset to resume from.
+
+<small>[Source: cryptify.ts#L143-L178](https://github.com/encryption4all/postguard-js/blob/6205fc309aaf954e82937beae723912812604f2e/src/api/cryptify.ts#L143-L178)</small>
+
+### Failure mode
+
+A 404 response with Cryptify's structured `upload_session_not_found` body surfaces as `UploadSessionExpiredError`. Cryptify deliberately collapses "unknown UUID" and "wrong recovery token" into the same response, so callers should treat both the same way: the session is gone, start a new upload. See [`UploadSessionExpiredError`](/sdk/js-errors#uploadsessionexpirederror) in the error reference.
+
+### Current limitation
+
+`resumeUpload` and `FileState` are exported by `@e4a/pg-js`, but the high-level `pg.encrypt(...).upload()` does not yet surface `recoveryToken` on its `UploadResult`. Capturing the token from the public API requires a follow-up on postguard-js to plumb it through. Track at [encryption4all/postguard-js#68](https://github.com/encryption4all/postguard-js/issues/68).
+
 ### Notify options
 
 The upload is silent by default. Both recipient and sender mails are opt-in. Pass `notify` to enable either or both.
