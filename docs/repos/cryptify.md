@@ -30,11 +30,26 @@ Configuration parameters:
 | `pkg_url` | URL of the PostGuard PKG server | `http://postguard-pkg:8087` |
 | `chunk_size` | Maximum size in bytes of a single upload chunk. Defaults to `5000000` (5 MB) | `5000000` |
 | `session_ttl_secs` | Idle TTL for an in-flight upload session, in seconds. The eviction deadline resets on each successful chunk PUT or `/status` call. Defaults to `3600` (60 minutes) | `3600` |
+| `staging_mode` | When `true`, `send_email` skips SMTP entirely and logs the intended email metadata at info level. The upload finalize still returns `Ok`. Defaults to `false`. Intended for staging deploys where real email delivery is undesirable | `false` |
 | `usage_db` | Path to the SQLite database used for upload usage accounting | `/app/data/usage.db` |
 
 The `chunk_size` setting caps the size of each `PUT /fileupload/{uuid}` body. Clients (such as `@e4a/pg-js` and the PostGuard website) use the same value for their upload chunks, so increasing it server-side without updating the client default will not produce larger chunks on its own.
 
-<small>[Source: src/config.rs#L15-L53](https://github.com/encryption4all/cryptify/blob/4c30e539a04be1dc08cc1704de35f1ad4320c5af/src/config.rs#L15-L53)</small>
+<small>[Source: src/config.rs#L3-L36](https://github.com/encryption4all/cryptify/blob/ca6be91913d0313791c5bbeb3dd16152c85855c6/src/config.rs#L3-L36)</small>
+
+### Staging mode
+
+Set `staging_mode = true` in the active config file (for example `conf/config.toml`) to skip SMTP for a whole deploy. With staging mode on, `POST /fileupload/finalize/{uuid}` still completes normally and returns `Ok`; the recipient email is replaced by a single info-level log line of the form:
+
+```
+[STAGING] Email NOT sent (staging_mode=true). Would have notified recipients=[...] from sender=... (attributes=[...]) lang=... expires=... confirm=... notify_recipients=... download_url=... uuid=...
+```
+
+The line carries the same recipients, sender, sender attributes, language, expiry, confirmation flag, notify-recipients flag, download URL, and UUID that a real notification would have used, so a staging deploy can be exercised end to end without delivering mail.
+
+The `smtp_url`, `smtp_port`, `smtp_username`, `smtp_password`, and `smtp_tls` settings are ignored while `staging_mode` is on, so they can stay unset in a staging environment.
+
+<small>[Source: src/email.rs#L191-L198, L294-L337](https://github.com/encryption4all/cryptify/blob/ca6be91913d0313791c5bbeb3dd16152c85855c6/src/email.rs#L191-L198)</small>
 
 ## Upload limits
 
