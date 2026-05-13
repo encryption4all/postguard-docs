@@ -8,6 +8,9 @@ export default withMermaid(defineConfig({
   head: [['link', { rel: 'icon', href: '/pg_logo_no_text.svg' }]],
   themeConfig: {
     logo: '/pg_logo_no_text.svg',
+    search: {
+      provider: 'local',
+    },
     nav: [
       { text: 'Guide', link: '/guide/what-is-postguard' },
       { text: 'SDK', link: '/sdk/overview' },
