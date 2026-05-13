@@ -204,7 +204,7 @@ The key issuance endpoints require a valid `Authorization: Bearer <jwt>` header.
 | `POST` | `/fileupload/init` | Initialize a file upload. Returns a UUID and upload token. Optional `Authorization: Bearer PG-…` unlocks the higher upload-quota tier; Cryptify forwards the bearer to PKG's `/v2/api-key/validate` and uses the returned tenant id for rolling-window accounting. |
 | `PUT` | `/fileupload/{uuid}` | Upload a chunk. Uses `Content-Range` headers for offset tracking. Requires `cryptifytoken` header. Carries the same `Authorization` bearer on each chunk as `init`. |
 | `POST` | `/fileupload/finalize/{uuid}` | Finalize the upload after all chunks are sent. |
-| `GET` | `/filedownload/{uuid}` | Download an encrypted file as a stream. |
+| `GET` | `/filedownload/{uuid}` | Download an encrypted file as a stream. Sets `Accept-Ranges: bytes` and serves `206 Partial Content` for single-range `Range` requests so downloads can resume. See [Range support on `/filedownload`](/repos/cryptify#range-support-on-filedownload). |
 
 See [Upload limits](/repos/cryptify#upload-limits) and [Authentication for the higher tier](/repos/cryptify#authentication-for-the-higher-tier) on the Cryptify page for the tier breakdown and PKG-unreachable behaviour (503 vs. 413).
 
