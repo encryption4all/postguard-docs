@@ -4,7 +4,7 @@
 
 | Input | Source | Typical use | Result shape |
 |-------|--------|-------------|--------------|
-| `{ uuid }` | Cryptify stored file | Web apps, download links | mirrors the upload mode — see below |
+| `{ uuid }` | Cryptify stored file | Web apps, download links | mirrors the upload mode (see below) |
 | `{ data }` | Raw ciphertext bytes | Email addons | `DecryptDataResult` |
 
 Both require the recipient to prove their identity through Yivi. You provide either an `element` (DOM selector for Yivi QR) or a `session` callback (for custom flows like popup windows).
@@ -44,10 +44,10 @@ Narrow the union at runtime with an `in` check:
 const result = await pg.open({ uuid }).decrypt({ element: '#yivi-web-form' });
 
 if ('plaintext' in result) {
-  // DecryptDataResult — payload was uploaded with Sealed.upload({ data })
+  // DecryptDataResult: payload was uploaded with Sealed.upload({ data })
   handleBytes(result.plaintext);
 } else {
-  // DecryptFileResult — payload was uploaded with Sealed.upload({ files })
+  // DecryptFileResult: payload was uploaded with Sealed.upload({ files })
   result.download();
 }
 ```

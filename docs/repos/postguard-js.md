@@ -131,7 +131,7 @@ result.download('decrypted-files.zip');
 console.log('Sender:', result.sender);
 ```
 
-The example above assumes the payload was uploaded with `Sealed.upload({ files })`. When the upload used `Sealed.upload({ data })`, the same call returns `DecryptDataResult` with `result.plaintext` (a `Uint8Array`) instead of `files` and `blob`. Narrow with `'plaintext' in result` — see [Decryption — Decrypt from Cryptify UUID](/sdk/js-decryption#decrypt-from-cryptify-uuid).
+The example above assumes the payload was uploaded with `Sealed.upload({ files })`. When the upload used `Sealed.upload({ data })`, the same call returns `DecryptDataResult` with `result.plaintext` (a `Uint8Array`) instead of `files` and `blob`. Narrow with `'plaintext' in result`. See [Decrypt from Cryptify UUID](/sdk/js-decryption#decrypt-from-cryptify-uuid) for details.
 
 ### Decrypt raw data
 
