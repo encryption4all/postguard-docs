@@ -2,12 +2,14 @@
 
 `pg.open()` returns an `Opened` builder. It supports two inputs:
 
-| Input | Source | Typical use |
-|-------|--------|-------------|
-| `{ uuid }` | Cryptify stored file | Web apps, download links |
-| `{ data }` | Raw ciphertext bytes | Email addons |
+| Input | Source | Typical use | Result shape |
+|-------|--------|-------------|--------------|
+| `{ uuid }` | Cryptify stored file | Web apps, download links | mirrors the upload mode (see below) |
+| `{ data }` | Raw ciphertext bytes | Email addons | `DecryptDataResult` |
 
 Both require the recipient to prove their identity through Yivi. You provide either an `element` (DOM selector for Yivi QR) or a `session` callback (for custom flows like popup windows).
+
+For `{ uuid }`, the result depends on how the payload was uploaded: `Sealed.upload({ files })` yields `DecryptFileResult`, while `Sealed.upload({ data })` yields `DecryptDataResult` (see [Decrypt from Cryptify UUID](#decrypt-from-cryptify-uuid)).
 
 ## Inspect before decrypt
 
@@ -25,13 +27,38 @@ The unsealer is cached after `inspect()`, so a following `decrypt()` reuses it w
 
 ## Decrypt from Cryptify UUID
 
-Pass `{ uuid }` to `pg.open()`, then call `decrypt()` with `element` (a CSS selector for the Yivi QR container) and an optional `recipient`. The result is a `DecryptFileResult` with a `download()` helper that triggers a browser download.
+Pass `{ uuid }` to `pg.open()`, then call `decrypt()` with `element` (a CSS selector for the Yivi QR container) and an optional `recipient`.
+
+The return type is the union `DecryptResult = DecryptFileResult | DecryptDataResult`. Which variant you get mirrors how the payload reached Cryptify:
+
+- Uploaded via `Sealed.upload({ files })` → `DecryptFileResult` with `files`, `blob`, and a `download()` helper.
+- Uploaded via `Sealed.upload({ data })` → `DecryptDataResult` with `plaintext` as a `Uint8Array`.
+
+This keeps the round-trip `pg.encrypt({ data }).upload()` → `pg.open({ uuid }).decrypt()` symmetric: raw bytes go in, raw bytes come out. Internally, `Sealed.upload({ data })` wraps the bytes as a single-entry zip named `data.bin`; on decrypt the SDK inspects the inner zip's central directory and, when the entries are exactly `['data.bin']`, unwraps that entry and returns `DecryptDataResult`.
+
+<small>[Source: opened.ts#L99-L121](https://github.com/encryption4all/postguard-js/blob/146a7ab70ea8acc6071a4c773a8ae467c1c391a9/src/opened.ts#L99-L121)</small>
+
+Narrow the union at runtime with an `in` check:
+
+```ts
+const result = await pg.open({ uuid }).decrypt({ element: '#yivi-web-form' });
+
+if ('plaintext' in result) {
+  // DecryptDataResult: payload was uploaded with Sealed.upload({ data })
+  handleBytes(result.plaintext);
+} else {
+  // DecryptFileResult: payload was uploaded with Sealed.upload({ files })
+  result.download();
+}
+```
 
 ::: warning
 Requires `cryptifyUrl` to be set in the constructor.
 :::
 
 ### `DecryptFileResult`
+
+Returned when the payload was uploaded with `Sealed.upload({ files })`.
 
 | Property | Type | Description |
 |----------|------|-------------|
@@ -62,6 +89,8 @@ const result = await opened.decrypt({
 <small>[Source: background.ts#L710-L721](https://github.com/encryption4all/postguard-tb-addon/blob/26b8433efc8997bc1fe614f532caf17fb94b4a70/src/background/background.ts#L710-L721)</small>
 
 ### `DecryptDataResult`
+
+Returned from `{ data }` decryption, and from `{ uuid }` when the payload was uploaded with `Sealed.upload({ data })`.
 
 | Property | Type | Description |
 |----------|------|-------------|
