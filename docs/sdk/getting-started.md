@@ -105,7 +105,7 @@ using E4A.PostGuard.Models;
 var pg = new PostGuard(new PostGuardConfig
 {
     PkgUrl = "https://pkg.staging.postguard.eu",
-    CryptifyUrl = "https://fileshare.staging.postguard.eu"
+    CryptifyUrl = "https://storage.staging.postguard.eu"
 });
 
 var sealed = pg.Encrypt(new EncryptInput
