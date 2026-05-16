@@ -112,7 +112,7 @@ Cryptify exposes a file upload/download API. An OpenAPI 3.0 specification is ava
 - `PUT /fileupload/{uuid}`: Upload a file chunk (use `Content-Range` header for chunked uploads).
 - `POST /fileupload/finalize/{uuid}`: Finalize the upload (sends the recipient notification email if `notifyRecipients` was `true` on init).
 - `GET /fileupload/{uuid}/status`: Read rolling-token state to resume an in-flight upload across a page refresh or tab crash. Authenticated via `X-Recovery-Token`.
-- `GET /filedownload/{uuid}`: Download a file.
+- `GET /filedownload/{uuid}`: Download a file. Supports resumable downloads via the HTTP `Range` header (see [Range support on `/filedownload`](#range-support-on-filedownload) below).
 
 ### `POST /fileupload/init` request body
 
@@ -187,6 +187,21 @@ If the request looks like a retry but the body bytes differ, the server responds
 The `prev_token` and `prev_offset` fields on `GET /fileupload/{uuid}/status` exist to feed exactly this path after a refresh.
 
 <small>[Source: api-description.yaml#L109-L124](https://github.com/encryption4all/cryptify/blob/4c30e539a04be1dc08cc1704de35f1ad4320c5af/api-description.yaml#L109-L124)</small>
+
+### Range support on `/filedownload`
+
+`GET /filedownload/{uuid}` honours inbound `Range` headers so browsers and other clients can resume an interrupted download instead of restarting from byte zero. Every response sets `Accept-Ranges: bytes`.
+
+| Request | Response |
+|---|---|
+| No `Range` header | `200 OK` with `Content-Length` and the full body. |
+| `Range: bytes=N-M`, `bytes=N-`, or `bytes=-N` | `206 Partial Content` with `Content-Range: bytes start-end/total` and the requested slice. Open-ended and suffix forms are clamped to the file size. |
+| Unsatisfiable or malformed range | `416 Range Not Satisfiable` with `Content-Range: bytes */total`. |
+| Multi-range (`bytes=0-9,20-29`) | Rejected as malformed; the server returns `416`. `multipart/byteranges` is intentionally unsupported. |
+
+The CORS preflight allowlist on the service includes `Range` alongside `Authorization`, `Content-Type`, `Content-Range`, `CryptifyToken`, and `X-Recovery-Token`, so browser `fetch` calls can send the header.
+
+<small>[Source: src/main.rs#L959-L1083](https://github.com/encryption4all/cryptify/blob/b1eff690eae096d4cec55e7dbf323d8d0c3d74c0/src/main.rs#L959-L1083)</small>
 
 ## Development
 
