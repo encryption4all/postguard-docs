@@ -15,7 +15,7 @@ using E4A.PostGuard.Models;
 var pg = new PostGuard(new PostGuardConfig
 {
     PkgUrl = "https://pkg.staging.postguard.eu",
-    CryptifyUrl = "https://fileshare.staging.postguard.eu"
+    CryptifyUrl = "https://storage.staging.postguard.eu"
 });
 // PkgUrl and CryptifyUrl must be absolute https:// URLs.
 // The constructor throws ArgumentException otherwise.
