@@ -168,9 +168,46 @@ Calls `GET /fileupload/{uuid}/status` with the `X-Recovery-Token` header and ret
 
 A 404 response with Cryptify's structured `upload_session_not_found` body surfaces as `UploadSessionExpiredError`. Cryptify deliberately collapses "unknown UUID" and "wrong recovery token" into the same response, so callers should treat both the same way: the session is gone, start a new upload. See [`UploadSessionExpiredError`](/sdk/js-errors#uploadsessionexpirederror) in the error reference.
 
-### Current limitation
+### Capture `recoveryToken` via `onUploadInit`
 
-`resumeUpload` and `FileState` are exported by `@e4a/pg-js`, but the high-level `pg.encrypt(...).upload()` does not yet surface `recoveryToken` on its `UploadResult`. Capturing the token from the public API requires a follow-up on postguard-js to plumb it through. Track at [encryption4all/postguard-js#68](https://github.com/encryption4all/postguard-js/issues/68).
+`UploadOptions` and `CreateEnvelopeOptions` accept an `onUploadInit` callback that hands the caller the `{uuid, recoveryToken}` pair needed by `resumeUpload`. Persist both fields to durable storage from inside the callback so a later session can rehydrate the upload after a process restart.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `onUploadInit` | `(info: { uuid: string; recoveryToken: string }) => void` | Fires once, synchronously, after `upload_init` resolves and before the first chunk PUT |
+
+The callback runs inside the upload stream's `start` handler. Keep the body short and synchronous; a throw errors the upload stream. A `chrome.storage.local.set` or `localStorage.setItem` is fine.
+
+<small>[Source: types.ts#L107-L112](https://github.com/encryption4all/postguard-js/blob/dcdd6591f58976364f8220f4cedbe86d0e2bce3b/src/types.ts#L107-L112)</small>
+
+With `Sealed.upload`:
+
+```ts
+const sealed = pg.encrypt({ sign, recipients, files });
+const result = await sealed.upload({
+  onUploadInit: ({ uuid, recoveryToken }) => {
+    localStorage.setItem('pg-upload', JSON.stringify({ uuid, recoveryToken }));
+  },
+});
+```
+
+With `createEnvelope`, pass the same callback through `CreateEnvelopeOptions`:
+
+```ts
+import { createEnvelope } from '@e4a/pg-js';
+
+const envelope = await createEnvelope({
+  sealed,
+  from,
+  onUploadInit: ({ uuid, recoveryToken }) => {
+    chrome.storage.local.set({ pgUpload: { uuid, recoveryToken } });
+  },
+});
+```
+
+After a restart, read the stored pair and call `resumeUpload(cryptifyUrl, uuid, recoveryToken, signal)` to recover the in-flight session.
+
+<small>[Source: types.ts#L246-L250](https://github.com/encryption4all/postguard-js/blob/dcdd6591f58976364f8220f4cedbe86d0e2bce3b/src/types.ts#L246-L250)</small>
 
 ### Notify options
 
