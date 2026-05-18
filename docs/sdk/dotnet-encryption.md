@@ -27,6 +27,18 @@ var pg = new PostGuard(new PostGuardConfig
 | `CryptifyUrl` | `string` | No | URL of the Cryptify file storage service. Required for `UploadAsync()`. Must be an absolute `https://` URL. |
 | `AllowInsecureUrls` | `bool` | No | Allow `http://localhost` URLs for local dev. Default `false`. Any non-`https://` value still throws `ArgumentException`. |
 | `Headers` | `Dictionary<string, string>` | No | Custom HTTP headers included in all requests |
+| `HttpClient` | `HttpClient?` | No | Caller-supplied `HttpClient`. The SDK reuses it for all PKG and Cryptify calls and does not dispose it. When unset, `PostGuard` creates and owns its own long-lived client. |
+| `Timeout` | `TimeSpan?` | No | Request timeout for the SDK-owned `HttpClient`. Ignored when `HttpClient` is supplied (the caller owns that client's timeout). Defaults to `HttpClient`'s built-in 100 second default when unset. |
+
+### Lifetime
+
+`PostGuard` implements `IDisposable`. The SDK keeps a single long-lived `HttpClient` (backed by a `SocketsHttpHandler` with a 2 minute `PooledConnectionLifetime`) and reuses it across calls, so reuse one `PostGuard` instance per process for sustained workloads rather than constructing a new one per request.
+
+```csharp
+using var pg = new PostGuard(config);
+```
+
+When `PostGuardConfig.HttpClient` is unset (the default), `pg.Dispose()` disposes the SDK-owned client. When you inject your own `HttpClient`, the SDK leaves it alone; ownership stays with the caller, which fits DI scenarios where the container manages the client's lifetime.
 
 ## Encrypt
 
