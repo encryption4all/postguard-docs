@@ -32,10 +32,11 @@ Configuration parameters:
 | `session_ttl_secs` | Idle TTL for an in-flight upload session, in seconds. The eviction deadline resets on each successful chunk PUT or `/status` call. Defaults to `3600` (60 minutes) | `3600` |
 | `staging_mode` | When `true`, `send_email` skips SMTP entirely and logs the intended email metadata at info level. The upload finalize still returns `Ok`. Defaults to `false`. Intended for staging deploys where real email delivery is undesirable | `false` |
 | `usage_db` | Path to the SQLite database used for upload usage accounting | `/app/data/usage.db` |
+| `metrics_scan_interval_secs` | Interval in seconds for the background task that samples `data_dir` size and file count for the storage gauges exposed at `GET /metrics`. Defaults to `60`. | `60` |
 
 The `chunk_size` setting caps the size of each `PUT /fileupload/{uuid}` body. Clients (such as `@e4a/pg-js` and the PostGuard website) use the same value for their upload chunks, so increasing it server-side without updating the client default will not produce larger chunks on its own.
 
-<small>[Source: src/config.rs#L3-L36](https://github.com/encryption4all/cryptify/blob/ca6be91913d0313791c5bbeb3dd16152c85855c6/src/config.rs#L3-L36)</small>
+<small>[Source: src/config.rs#L3-L38](https://github.com/encryption4all/cryptify/blob/2af3ba0736ba138343295669411334af6f6de37a/src/config.rs#L3-L38)</small>
 
 ### Staging mode
 
@@ -113,6 +114,7 @@ Cryptify exposes a file upload/download API. An OpenAPI 3.0 specification is ava
 - `POST /fileupload/finalize/{uuid}`: Finalize the upload (sends the recipient notification email if `notifyRecipients` was `true` on init).
 - `GET /fileupload/{uuid}/status`: Read rolling-token state to resume an in-flight upload across a page refresh or tab crash. Authenticated via `X-Recovery-Token`.
 - `GET /filedownload/{uuid}`: Download a file. Supports resumable downloads via the HTTP `Range` header (see [Range support on `/filedownload`](#range-support-on-filedownload) below).
+- `GET /metrics`: Prometheus text-format metrics for monitoring (see [Metrics](#metrics) below). Unauthenticated; intended for scraping over a restricted network only.
 
 ### `POST /fileupload/init` request body
 
@@ -202,6 +204,42 @@ The `prev_token` and `prev_offset` fields on `GET /fileupload/{uuid}/status` exi
 The CORS preflight allowlist on the service includes `Range` alongside `Authorization`, `Content-Type`, `Content-Range`, `CryptifyToken`, and `X-Recovery-Token`, so browser `fetch` calls can send the header.
 
 <small>[Source: src/main.rs#L959-L1083](https://github.com/encryption4all/cryptify/blob/b1eff690eae096d4cec55e7dbf323d8d0c3d74c0/src/main.rs#L959-L1083)</small>
+
+## Metrics
+
+`GET /metrics` returns counters and gauges in the [Prometheus text exposition format](https://prometheus.io/docs/instrumenting/exposition_formats/) so a Prometheus instance can scrape Cryptify for dashboards and alerting. The endpoint is unauthenticated. It is intended to be reachable only from the internal monitoring network; deployments should restrict it with a firewall rule or a reverse-proxy allow-list in front of Cryptify.
+
+Five series are exposed:
+
+| Metric | Type | Description |
+|---|---|---|
+| `cryptify_uploads_total{channel}` | counter | Finalized uploads since process start, labelled by client channel. |
+| `cryptify_upload_bytes_total{channel}` | counter | Bytes uploaded across finalized uploads, labelled by client channel. |
+| `cryptify_storage_bytes` | gauge | Current bytes of uploads held under `data_dir`. Sampled every `metrics_scan_interval_secs`. |
+| `cryptify_active_files` | gauge | Current file count under `data_dir`. Sampled on the same interval. |
+| `cryptify_expired_files_total` | counter | Uploads purged before being finalized (idle-TTL eviction). |
+
+The two storage series are produced by a background task that walks `data_dir` once every `metrics_scan_interval_secs` (default `60`). The counters are updated inline on finalize and on eviction, so they do not depend on the scan cadence.
+
+At process startup Cryptify pre-seeds `cryptify_uploads_total` and `cryptify_upload_bytes_total` at zero for six known channel values: `website`, `staging-website`, `outlook`, `thunderbird`, `api`, and `unknown`. Without the pre-seed, Prometheus only creates a series the first time a request from a given channel lands, which means PromQL `increase()` over a window can read zero for a channel whose first observed sample is already non-zero. Pre-seeding also keeps the channel always visible on Grafana dashboards before any traffic arrives.
+
+<small>[Source: src/metrics.rs#L28-L182](https://github.com/encryption4all/cryptify/blob/2af3ba0736ba138343295669411334af6f6de37a/src/metrics.rs#L28-L182)</small>
+
+### Channel detection
+
+The `channel` label on `cryptify_uploads_total` and `cryptify_upload_bytes_total` is derived per request from the headers in this priority order:
+
+1. `X-Cryptify-Source` if present.
+2. Otherwise `api` when the request carries `Authorization: Bearer …` or `X-Api-Key`.
+3. Otherwise `staging-website` or `website` from the `Origin` header.
+4. Otherwise `outlook` or `thunderbird` from the `User-Agent` substring.
+5. Otherwise `unknown`.
+
+Whichever rule fires, the resulting value is lowercased, restricted to `[a-z0-9_-]`, and truncated to 32 characters before it reaches Prometheus, so clients cannot inject label syntax or explode cardinality with arbitrary inputs. An empty or all-dash result falls back to `unknown`.
+
+The first-party clients now set the header explicitly: the PostGuard website sends `X-Cryptify-Source: website` ([encryption4all/postguard-website#228](https://github.com/encryption4all/postguard-website/pull/228)), the Outlook add-in sends `outlook` ([encryption4all/postguard-outlook-addon#96](https://github.com/encryption4all/postguard-outlook-addon/pull/96)), and the Thunderbird add-in sends `thunderbird` ([encryption4all/postguard-tb-addon#121](https://github.com/encryption4all/postguard-tb-addon/pull/121)). A third party integrating its own Cryptify client should set `X-Cryptify-Source` to a stable identifier for that client to be classified correctly on the dashboards. Without it, the channel falls through to `Origin` or `User-Agent` heuristics and may land on `unknown`.
+
+<small>[Source: src/metrics.rs#L184-L249](https://github.com/encryption4all/cryptify/blob/2af3ba0736ba138343295669411334af6f6de37a/src/metrics.rs#L184-L249)</small>
 
 ## Development
 
