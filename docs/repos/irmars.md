@@ -20,8 +20,10 @@ Forked from [tweedegolf/irmars](https://github.com/tweedegolf/irmars), which has
 
 ```toml
 [dependencies]
-irma = { package = "irmars", version = "0.2" }
+irma = { package = "irmars", version = "0.2.2" }
 ```
+
+<small>[Source: pg-core/Cargo.toml#L19](https://github.com/encryption4all/postguard/blob/f2f06cd5f5e24ba58f299547e8e78af0173944c7/pg-core/Cargo.toml#L19)</small>
 
 The published crate name is `irmars`; the local crate alias remains `irma`. This was rolled out in [postguard#192](https://github.com/encryption4all/postguard/pull/192).
 
