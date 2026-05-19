@@ -11,6 +11,7 @@ These are the low-level building blocks that implement the cryptographic primiti
 | [pg-curve](/repos/pg-curve) | Rust | Fork of BLS12-381 elliptic curve with target group serialization |
 | [ibe](/repos/ibe) | Rust | Identity-Based Encryption schemes on BLS12-381 |
 | [ibs](/repos/ibs) | Rust | Identity-Based Signature schemes |
+| [irmars](/repos/irmars) | Rust | Client library for talking to Yivi (IRMA) servers |
 
 ## Core
 
@@ -60,6 +61,8 @@ pg-curve
               ├── pg-pkg (PKG server)
               └── pg-cli
   └── ibs (used by pg-core for sender signatures)
+
+irmars (Yivi client) ──── postguard (pg-core, pg-pkg, pg-cli)
 
 cryptify (backend) ─────── postguard-website (file storage)
 ```

@@ -65,6 +65,7 @@ export default withMermaid(defineConfig({
               { text: 'pg-curve', link: '/repos/pg-curve' },
               { text: 'ibe', link: '/repos/ibe' },
               { text: 'ibs', link: '/repos/ibs' },
+              { text: 'irmars', link: '/repos/irmars' },
             ],
           },
           {
