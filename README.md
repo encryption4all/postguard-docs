@@ -10,7 +10,7 @@ This site contains guides, SDK reference documentation, integration instructions
 
 ### Prerequisites
 
-- Node.js 18+
+- Node.js 22+
 
 ### Running Locally
 
