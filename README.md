@@ -30,7 +30,7 @@ npm run docs:preview   # preview the built site
 
 ## Releasing
 
-The site is deployed automatically via GitHub Actions. Pushing to `main` triggers a Docker image build (NGINX-based static hosting) which is deployed to production.
+Pushing to `main` triggers `.github/workflows/ci.yml`, which builds and pushes the Docker image to `ghcr.io/encryption4all/postguard-docs:edge`. There is no automatic deploy step. The host running production at `docs.postguard.eu` (an NGINX container serving the built `docs/.vitepress/dist`) has to pull the new `edge` tag and restart the container to pick up changes.
 
 ## License
 
