@@ -26,8 +26,8 @@ These are not needed when using API key signing or custom session callbacks.
 import { PostGuard } from '@e4a/pg-js';
 
 const pg = new PostGuard({
-  pkgUrl: 'https://pkg.staging.yivi.app',
-  cryptifyUrl: 'https://fileshare.staging.yivi.app', // optional, for file upload flows
+  pkgUrl: 'https://pkg.staging.postguard.eu',
+  cryptifyUrl: 'https://storage.staging.postguard.eu', // optional, for file upload flows
   headers: { 'X-My-Client': 'v1.0' },                // optional
 });
 ```
@@ -83,8 +83,8 @@ The size of each chunk sent to Cryptify is configurable via `uploadChunkSize` on
 
 ```ts
 const pg = new PostGuard({
-  pkgUrl: 'https://pkg.staging.yivi.app',
-  cryptifyUrl: 'https://fileshare.staging.yivi.app',
+  pkgUrl: 'https://pkg.staging.postguard.eu',
+  cryptifyUrl: 'https://storage.staging.postguard.eu',
   uploadChunkSize: 10_000_000, // 10 MB chunks
 });
 ```
