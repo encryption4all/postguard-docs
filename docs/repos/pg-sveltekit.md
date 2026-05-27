@@ -39,8 +39,8 @@ Configure the PKG and Cryptify URLs via environment variables. Keep the API key 
 
 ```sh
 # Public (available in browser)
-PUBLIC_PKG_URL=https://pkg.staging.yivi.app
-PUBLIC_CRYPTIFY_URL=https://fileshare.staging.yivi.app
+PUBLIC_PKG_URL=https://pkg.staging.postguard.eu
+PUBLIC_CRYPTIFY_URL=https://storage.staging.postguard.eu
 PUBLIC_APP_NAME=PostGuard for Business Example
 
 # Server-only
@@ -61,8 +61,8 @@ export const PG_API_KEY = env['PG_API_KEY'] ?? '';
 import { env } from '$env/dynamic/public';
 
 export const APP_NAME = env.PUBLIC_APP_NAME || 'PostGuard for Business Example';
-export const PKG_URL = env.PUBLIC_PKG_URL || 'https://pkg.staging.yivi.app';
-export const CRYPTIFY_URL = env.PUBLIC_CRYPTIFY_URL || 'https://fileshare.staging.yivi.app';
+export const PKG_URL = env.PUBLIC_PKG_URL || 'https://pkg.staging.postguard.eu';
+export const CRYPTIFY_URL = env.PUBLIC_CRYPTIFY_URL || 'https://storage.staging.postguard.eu';
 ```
 
 <small>[Source: config.ts](https://github.com/encryption4all/postguard-examples/blob/3d06342fad2c749ca4d043070d1ad9c831c7bfc1/pg-sveltekit/src/lib/config.ts)</small>

@@ -44,8 +44,8 @@ Encrypt files and send them to a recipient:
 import { PostGuard } from '@e4a/pg-js';
 
 const pg = new PostGuard({
-  pkgUrl: 'https://pkg.staging.yivi.app',
-  cryptifyUrl: 'https://fileshare.staging.yivi.app'
+  pkgUrl: 'https://pkg.staging.postguard.eu',
+  cryptifyUrl: 'https://storage.staging.postguard.eu'
 });
 
 const sealed = pg.encrypt({

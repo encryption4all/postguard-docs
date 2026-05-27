@@ -44,7 +44,7 @@ You can override the default staging URLs:
 
 ```bash
 export PG_PKG_URL="https://pkg.postguard.eu"
-export PG_CRYPTIFY_URL="https://fileshare.postguard.eu"
+export PG_CRYPTIFY_URL="https://storage.postguard.eu"
 dotnet run
 ```
 

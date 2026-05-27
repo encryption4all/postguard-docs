@@ -95,8 +95,8 @@ Pass `retry` on the `PostGuardConfig` to tune how chunk PUTs and downloads handl
 
 ```ts
 const pg = new PostGuard({
-  pkgUrl: 'https://pkg.staging.yivi.app',
-  cryptifyUrl: 'https://fileshare.staging.yivi.app',
+  pkgUrl: 'https://pkg.staging.postguard.eu',
+  cryptifyUrl: 'https://storage.staging.postguard.eu',
   retry: {
     maxAttempts: 5,
     chunkTimeoutMs: 60_000,
