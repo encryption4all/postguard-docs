@@ -42,6 +42,7 @@ From the [postguard-examples](https://github.com/encryption4all/postguard-exampl
 | Project | Language | Description |
 |---|---|---|
 | [pg-sveltekit](/repos/pg-sveltekit) | TypeScript | SvelteKit web app using `@e4a/pg-js` |
+| [pg-node](/repos/pg-node) | JavaScript | Node.js CLI using `@e4a/pg-js` from a server runtime |
 | [pg-dotnet](/repos/pg-dotnet) | C# | .NET console app using `E4A.PostGuard` |
 | [pg-manual](/repos/pg-manual) | JavaScript | Browser example using `@e4a/pg-wasm` directly (no SDK) |
 
