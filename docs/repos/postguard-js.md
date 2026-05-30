@@ -262,11 +262,19 @@ try {
 }
 ```
 
+## Server-side usage
+
+The SDK runs on browsers, Node.js (20.3+), Bun, and Deno. The lower bound is set by `AbortSignal.any`, listed in `engines.node` of the package.
+
+Encrypt and upload calls work identically across all four runtimes. Decryption with `pg.sign.yivi(...)` and `opened.decrypt({ element })` is browser-only — both render the Yivi QR widget into a DOM element. Calling `pg.sign.yivi(...)` from a server runtime throws `YiviSessionError` upfront before any session starts; pick `pg.sign.apiKey(...)` or `pg.sign.session(...)` instead.
+
+See the [pg-node example](/repos/pg-node) for a runnable Node.js script using `pg.sign.apiKey`.
+
 ## Development
 
 ### Prerequisites
 
-- Node.js 20+
+- Node.js 20.3+ (or Bun / Deno)
 
 ### Building
 
