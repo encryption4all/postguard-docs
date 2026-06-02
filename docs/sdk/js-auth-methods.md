@@ -75,8 +75,92 @@ When `includeSender` is `true`, the sender's identity is added to the encryption
 |-----------|------|----------|-------------|
 | `element` | `string` | Yes | CSS selector for the QR code container |
 | `senderEmail` | `string` | No | The sender's email address to prove |
-| `attributes` | `Array<{ t, v?, optional? }>` | No | Extra attributes to request (e.g. name, phone). Email is always included automatically. |
+| `attributes` | `AttrConItem[]` | No | Extra attributes to request. Each entry is either a single attribute (`AttrReq`) or a disjunction (`AttrDiscon`). Email is always included automatically. |
 | `includeSender` | `boolean` | No | Also encrypt for the sender so they can decrypt their own message (default: `false`) |
+
+### Attribute disjunctions
+
+By default each entry in `attributes` is a single attribute object (`AttrReq`). When you need to accept the same piece of information from multiple credential types (for example, a name that can come from a municipality credential, a passport, an ID card, or a driving licence), you can pass an `AttrDiscon` instead: a nested array where each inner array is one acceptable conjunction of attributes (an AND), and the outer array is the list of alternatives (an OR).
+
+```ts
+type AttrReq    = { t: string; v?: string; optional?: boolean }
+type AttrDiscon = AttrReq[][]   // OR of ANDs
+type AttrConItem = AttrReq | AttrDiscon
+```
+
+Narrow the union at runtime with `Array.isArray(item)`: `true` → `AttrDiscon`, `false` → `AttrReq`.
+
+#### Optional disjunctions
+
+To make a disjunction optional, add an empty array `[]` as the first alternative. Yivi treats an empty conjunction as always-satisfiable, making the whole discon skippable.
+
+#### Example: optional name from any government ID
+
+This requests the sender's name, but accepts any of four credential types and makes the whole group optional. If the sender does not have any of the listed credentials loaded in Yivi, they can skip the disclosure entirely.
+
+```ts
+const sign = pg.sign.yivi({
+  element: '#crypt-irma-qr',
+  attributes: [
+    // Optional name — sender can satisfy with any one of the four alternatives,
+    // or skip entirely (the empty [] alternative is always satisfiable).
+    [
+      [],                                                        // skip (optional)
+      [{ t: 'pbdf.gemeente.personalData.fullname' }],           // OR: municipality full name
+      [{ t: 'pbdf.pbdf.passport.firstName' },
+       { t: 'pbdf.pbdf.passport.lastName' }],                   // OR: passport first + last
+      [{ t: 'pbdf.pbdf.idcard.firstName' },
+       { t: 'pbdf.pbdf.idcard.lastName' }],                     // OR: ID card first + last
+      [{ t: 'pbdf.pbdf.drivinglicence.firstName' },
+       { t: 'pbdf.pbdf.drivinglicence.lastName' }],             // OR: driving licence first + last
+    ],
+    // Other optional attributes can still be flat AttrReq entries.
+    { t: 'pbdf.sidn-pbdf.mobilenumber.mobilenumber', optional: true },
+    { t: 'pbdf.gemeente.personalData.dateofbirth', optional: true },
+  ],
+  includeSender: true,
+});
+```
+
+The Yivi app presents the name group as a single step. The user picks whichever credential they have loaded; if they have none, they skip. The remainder of the `attributes` array (phone, date of birth) is presented as separate optional steps.
+
+#### Mandatory disjunction
+
+Remove the empty `[]` alternative to make the disclosure required. The Yivi session will not complete until the sender proves their name from one of the listed credentials:
+
+```ts
+[
+  [{ t: 'pbdf.gemeente.personalData.fullname' }],
+  [{ t: 'pbdf.pbdf.passport.firstName' }, { t: 'pbdf.pbdf.passport.lastName' }],
+  [{ t: 'pbdf.pbdf.idcard.firstName' },   { t: 'pbdf.pbdf.idcard.lastName' }],
+  [{ t: 'pbdf.pbdf.drivinglicence.firstName' }, { t: 'pbdf.pbdf.drivinglicence.lastName' }],
+]
+```
+
+::: info PKG requirement
+Attribute disjunctions require `@e4a/pg-js` ≥ 1.11.0 and a PKG running `postguard` with condiscon support. Earlier PKG versions only accept a flat `con` array.
+:::
+
+#### How it maps to the PKG wire format
+
+The `attributes` array is forwarded verbatim as the `con` field in the `POST /v2/request/start` body. Single `AttrReq` objects serialise as `{"t":"..."}` objects; `AttrDiscon` entries serialise as nested arrays, exactly the shape the PKG's `ConItem` untagged enum expects:
+
+```json
+{
+  "con": [
+    { "t": "pbdf.sidn-pbdf.email.email" },
+    [
+      [],
+      [{ "t": "pbdf.gemeente.personalData.fullname" }],
+      [{ "t": "pbdf.pbdf.passport.firstName" }, { "t": "pbdf.pbdf.passport.lastName" }],
+      [{ "t": "pbdf.pbdf.idcard.firstName" },   { "t": "pbdf.pbdf.idcard.lastName" }],
+      [{ "t": "pbdf.pbdf.drivinglicence.firstName" }, { "t": "pbdf.pbdf.drivinglicence.lastName" }]
+    ],
+    { "t": "pbdf.sidn-pbdf.mobilenumber.mobilenumber", "optional": true },
+    { "t": "pbdf.gemeente.personalData.dateofbirth", "optional": true }
+  ]
+}
+```
 
 ## Session Callback
 
