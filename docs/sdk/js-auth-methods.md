@@ -80,7 +80,7 @@ When `includeSender` is `true`, the sender's identity is added to the encryption
 
 ### Attribute disjunctions
 
-By default each entry in `attributes` is a single attribute object (`AttrReq`). When you need to accept the same piece of information from multiple credential types — for example, a name that can come from a municipality credential, a passport, an ID card, or a driving licence — you can pass an **`AttrDiscon`** instead: a nested array where each inner array is one acceptable conjunction of attributes (an AND), and the outer array is the list of alternatives (an OR).
+By default each entry in `attributes` is a single attribute object (`AttrReq`). When you need to accept the same piece of information from multiple credential types (for example, a name that can come from a municipality credential, a passport, an ID card, or a driving licence), you can pass an `AttrDiscon` instead: a nested array where each inner array is one acceptable conjunction of attributes (an AND), and the outer array is the list of alternatives (an OR).
 
 ```ts
 type AttrReq    = { t: string; v?: string; optional?: boolean }
@@ -90,7 +90,9 @@ type AttrConItem = AttrReq | AttrDiscon
 
 Narrow the union at runtime with `Array.isArray(item)`: `true` → `AttrDiscon`, `false` → `AttrReq`.
 
-**Making a disjunction optional** follows the Yivi convention: add an empty array `[]` as the first alternative. Yivi treats an empty conjunction as always-satisfiable, making the whole discon skippable.
+#### Optional disjunctions
+
+To make a disjunction optional, add an empty array `[]` as the first alternative. Yivi treats an empty conjunction as always-satisfiable, making the whole discon skippable.
 
 #### Example: optional name from any government ID
 
@@ -141,7 +143,7 @@ Attribute disjunctions require `@e4a/pg-js` ≥ 1.11.0 and a PKG running `postgu
 
 #### How it maps to the PKG wire format
 
-The `attributes` array is forwarded verbatim as the `con` field in the `POST /v2/request/start` body. Single `AttrReq` objects serialise as `{"t":"..."}` objects; `AttrDiscon` entries serialise as nested arrays — exactly the shape the PKG's `ConItem` untagged enum expects:
+The `attributes` array is forwarded verbatim as the `con` field in the `POST /v2/request/start` body. Single `AttrReq` objects serialise as `{"t":"..."}` objects; `AttrDiscon` entries serialise as nested arrays, exactly the shape the PKG's `ConItem` untagged enum expects:
 
 ```json
 {
@@ -154,7 +156,8 @@ The `attributes` array is forwarded verbatim as the `con` field in the `POST /v2
       [{ "t": "pbdf.pbdf.idcard.firstName" },   { "t": "pbdf.pbdf.idcard.lastName" }],
       [{ "t": "pbdf.pbdf.drivinglicence.firstName" }, { "t": "pbdf.pbdf.drivinglicence.lastName" }]
     ],
-    { "t": "pbdf.sidn-pbdf.mobilenumber.mobilenumber", "optional": true }
+    { "t": "pbdf.sidn-pbdf.mobilenumber.mobilenumber", "optional": true },
+    { "t": "pbdf.gemeente.personalData.dateofbirth", "optional": true }
   ]
 }
 ```
