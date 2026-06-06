@@ -142,6 +142,15 @@ const envelope = await pg.email.createEnvelope({
 
 Callers that handle the result must null-check `envelope.attachment` before reading it, since tier 3 envelopes carry no attachment.
 
+### Failures during upload
+
+Tier 2 and tier 3 envelopes both attempt a Cryptify upload. Their failure semantics differ:
+
+- **Tier 2** falls back to the local attachment when the upload rejects. The promise resolves and the envelope still contains the `postguard.encrypted` file; the failure is logged via `console.warn` so it isn't silent. The recipient can still decrypt from the attachment.
+- **Tier 3** has no local fallback (the attachment is omitted by design), so the original error is re-thrown. `createEnvelope` rejects with the underlying typed error (`NetworkError`, `UploadSessionExpiredError`, or a generic `PostGuardError`) and callers should branch on the same error classes they already use around `Sealed.upload()`.
+
+Prior to `@e4a/pg-js@2.0.0`, a tier 3 upload failure was swallowed and `createEnvelope` returned an envelope with `attachment: null` plus a body whose fallback link pointed at a non-existent Cryptify UUID. Source: [encryption4all/postguard-js#82](https://github.com/encryption4all/postguard-js/pull/82).
+
 ### Parameters
 
 | Parameter | Type | Required | Description |
