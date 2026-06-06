@@ -123,6 +123,8 @@ adb reverse tcp:8080 tcp:8080   # PostGuard website
 
 ## Environment Variables
 
+`VITE_*` variables are read at build time and baked into the bundle.
+
 | Variable | Default | Description |
 |---|---|---|
 | `VITE_FILEHOST_URL` | `http://localhost:8000` | Cryptify file hosting service URL |
@@ -130,6 +132,20 @@ adb reverse tcp:8080 tcp:8080   # PostGuard website
 | `VITE_MAX_UPLOAD_SIZE` | none | Maximum file upload size in bytes |
 | `VITE_UPLOAD_CHUNK_SIZE` | none | Upload chunk size in bytes |
 | `VITE_FILEREAD_CHUNK_SIZE` | none | File read chunk size in bytes |
+
+## Runtime config
+
+A second tier of flags is read at page load from a global `APP_CONFIG` object served by `static/config.js`. Deployed environments overwrite the file via the Terraform ConfigMap; local Docker Compose uses the in-repo copy. Each key is optional, with a fallback baked into `src/lib/env.ts`.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `SITE_URL` | string | `https://postguard.eu` | Base URL used by sitemap, RSS, JSON-LD, and the `(app)` routes. Marketing pages are prerendered, so the baked-in fallback is what ships in their static HTML; a runtime override only takes effect on non-prerendered routes such as `/decrypt` and `/fileshare`. Added in [encryption4all/postguard-website#255](https://github.com/encryption4all/postguard-website/pull/255). |
+| `BUSINESS_URL` | string | `https://business.postguard.eu` | Link target for the "for Business" entry point. |
+| `FF_BUSINESS` | boolean | `false` | Feature flag that controls whether the business entry point is shown. |
+| `STAGING` | boolean | `false` | True on staging/dev where cryptify runs with `staging_mode = true` and does not send notification mail. The website renders an in-page preview of the would-be recipient email so developers can grab the download link without trawling cryptify logs. Added in [encryption4all/postguard-website#244](https://github.com/encryption4all/postguard-website/pull/244). |
+| `GLITCHTIP_DSN` | string | `""` | DSN for a Sentry-compatible error reporter (PostGuard runs GlitchTip). An empty value disables reporting at module load. The fileshare flow's `CrashReport` panel uses this to POST captured exceptions on user opt-in. Added in [encryption4all/postguard-website#247](https://github.com/encryption4all/postguard-website/pull/247). |
+
+The runtime tier exists because these values change per environment without rebuilding the static bundle. Override them by replacing `config.js` in the served container.
 
 ## Releasing
 
