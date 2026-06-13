@@ -49,6 +49,10 @@ if (uuidParam) {
 
 <small>[Source: src/routes/(app)/decrypt/+page.svelte#L86-L106](https://github.com/encryption4all/postguard-website/blob/0398c87d113ab7b9fc518f4eb9aaf7059745d54a/src/routes/%28app%29/decrypt/%2Bpage.svelte#L86-L106)</small>
 
+### Download confirmation gate
+
+Since [encryption4all/postguard-website#258](https://github.com/encryption4all/postguard-website/pull/258), the `/download` page decrypts into in-memory blobs and pauses on a confirmation step before any file is written to disk. The recipient sees the file list and the verified sender, then chooses to keep or discard the files. Declining drops the blobs without writing them; accepting starts the browser downloads. When the sender disclosed nothing beyond their email, the confirmation panel warns that email alone is a weak identity claim, since anyone with control of that mailbox could have signed the message.
+
 ## Development
 
 ### Quick Start with Docker Compose (recommended)
