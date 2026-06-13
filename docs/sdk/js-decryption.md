@@ -165,6 +165,8 @@ The full `FriendlySender` type:
 | `attributes` | `Array<{ type, value? }>` | All identity attributes |
 | `raw` | `SenderIdentity` | Raw identity structure for advanced use |
 
+Since [encryption4all/postguard-js#89](https://github.com/encryption4all/postguard-js/pull/89), `attributes` also carries the attributes the sender signed under their private signing identity (name, mobile, dateofbirth, and so on), not just the public email. Earlier versions discarded the unseal result and surfaced only the email, so recipients saw a single attribute even when the sender had disclosed more. Read the extra attributes from `attributes` to show the recipient exactly who signed the message.
+
 ## Error handling
 
 Decryption can throw:
