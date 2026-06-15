@@ -31,7 +31,7 @@ Pass `{ uuid }` to `pg.open()`, then call `decrypt()` with `element` (a CSS sele
 
 The return type is the union `DecryptResult = DecryptFileResult | DecryptDataResult`. Which variant you get mirrors how the payload reached Cryptify:
 
-- Uploaded via `Sealed.upload({ files })` → `DecryptFileResult` with `files`, `blob`, and a `download()` helper.
+- Uploaded via `Sealed.upload({ files })` → `DecryptFileResult` with a `files` array of `{ name, blob }` entries, the raw ZIP as `blob`, and a `download()` helper that fans out one browser download per entry.
 - Uploaded via `Sealed.upload({ data })` → `DecryptDataResult` with `plaintext` as a `Uint8Array`.
 
 This keeps the round-trip `pg.encrypt({ data }).upload()` → `pg.open({ uuid }).decrypt()` symmetric: raw bytes go in, raw bytes come out. Internally, `Sealed.upload({ data })` wraps the bytes as a single-entry zip named `data.bin`; on decrypt the SDK inspects the inner zip's central directory and, when the entries are exactly `['data.bin']`, unwraps that entry and returns `DecryptDataResult`.
@@ -62,10 +62,14 @@ Returned when the payload was uploaded with `Sealed.upload({ files })`.
 
 | Property | Type | Description |
 |----------|------|-------------|
-| `files` | `string[]` | Filenames inside the ZIP |
+| `files` | `Array<{ name: string; blob: Blob }>` | One entry per file inside the ZIP, with the entry's filename and decoded `Blob` |
 | `sender` | `FriendlySender \| null` | Verified sender identity with `.email` and `.attributes` |
-| `blob` | `Blob` | The decrypted ZIP blob |
-| `download` | `(filename?: string) => void` | Trigger a browser download |
+| `blob` | `Blob` | The raw decrypted ZIP, as an escape hatch for callers that want to re-upload, hand-process, or offer a single "Download as ZIP" button |
+| `download` | `() => void` | Triggers one browser download per entry in `files` |
+
+::: warning Breaking change in v2
+Prior to `@e4a/pg-js@2.0.0`, `files` was `string[]` (filenames only) and `download` took an optional `filename` argument that selected a single entry. The new `download()` takes no arguments and fans out per entry; callers that want a single combined download can pipe `blob` through their own anchor. Source: [encryption4all/postguard-js#86](https://github.com/encryption4all/postguard-js/pull/86).
+:::
 
 ## Decrypt from raw data
 
@@ -105,6 +109,7 @@ Returned from `{ data }` decryption, and from `{ uuid }` when the payload was up
 | `session` | `SessionCallback` | No* | Custom session callback for non-browser environments |
 | `recipient` | `string` | No | Email of the recipient to decrypt for (required if multiple recipients) |
 | `enableCache` | `boolean` | No | Cache the Yivi JWT so repeated decryptions don't require re-scanning the QR code |
+| `onDownloadProgress` | `(pct: number \| undefined) => void` | No | Progress callback for the streaming download+decrypt pipeline. Fires on every chunk with `0–100` when the server set `Content-Length`, or `undefined` when it didn't (consumer should render an indeterminate indicator). Available since `@e4a/pg-js@2.0.0` ([#86](https://github.com/encryption4all/postguard-js/pull/86)) |
 
 *Provide either `element` or `session`. If neither is provided, the SDK throws a `DecryptionError`.
 
@@ -160,6 +165,8 @@ The full `FriendlySender` type:
 | `attributes` | `Array<{ type, value? }>` | All identity attributes |
 | `raw` | `SenderIdentity` | Raw identity structure for advanced use |
 
+Since [encryption4all/postguard-js#89](https://github.com/encryption4all/postguard-js/pull/89), `attributes` also carries the attributes the sender signed under their private signing identity (name, mobile, dateofbirth, and so on), not just the public email. Earlier versions discarded the unseal result and surfaced only the email, so recipients saw a single attribute even when the sender had disclosed more. Read the extra attributes from `attributes` to show the recipient exactly who signed the message.
+
 ## Error handling
 
 Decryption can throw:
@@ -170,6 +177,8 @@ Decryption can throw:
 - `NetworkError`: PKG or Cryptify communication failure
 
 Catch `IdentityMismatchError` first to show a recipient-mismatch message, then `YiviSessionError` to surface a friendly "session cancelled" message instead of a generic decryption failure, then fall through to a generic error branch for everything else.
+
+Since `@e4a/pg-js@2.0.0`, `IdentityMismatchError` preserves the underlying error on `.cause` when the failure was not a real identity mismatch (network drop during streaming, WASM panic, malformed ciphertext). Inspect `err.cause` when debugging a transient failure that surfaces as a mismatch. An `AbortError` from a caller-supplied `signal` passes through as-is — it is not rewrapped. Source: [encryption4all/postguard-js#84](https://github.com/encryption4all/postguard-js/pull/84).
 
 ```ts
 import { YiviSessionError, IdentityMismatchError } from '@e4a/pg-js';

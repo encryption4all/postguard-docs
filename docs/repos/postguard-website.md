@@ -49,6 +49,10 @@ if (uuidParam) {
 
 <small>[Source: src/routes/(app)/decrypt/+page.svelte#L86-L106](https://github.com/encryption4all/postguard-website/blob/0398c87d113ab7b9fc518f4eb9aaf7059745d54a/src/routes/%28app%29/decrypt/%2Bpage.svelte#L86-L106)</small>
 
+### Download confirmation gate
+
+Since [encryption4all/postguard-website#258](https://github.com/encryption4all/postguard-website/pull/258), the `/download` page decrypts into in-memory blobs and pauses on a confirmation step before any file is written to disk. The recipient sees the file list and the verified sender, then chooses to keep or discard the files. Declining drops the blobs without writing them; accepting starts the browser downloads. When the sender disclosed nothing beyond their email, the confirmation panel warns that email alone is a weak identity claim, since anyone with control of that mailbox could have signed the message.
+
 ## Development
 
 ### Quick Start with Docker Compose (recommended)
@@ -123,6 +127,8 @@ adb reverse tcp:8080 tcp:8080   # PostGuard website
 
 ## Environment Variables
 
+`VITE_*` variables are read at build time and baked into the bundle.
+
 | Variable | Default | Description |
 |---|---|---|
 | `VITE_FILEHOST_URL` | `http://localhost:8000` | Cryptify file hosting service URL |
@@ -130,6 +136,20 @@ adb reverse tcp:8080 tcp:8080   # PostGuard website
 | `VITE_MAX_UPLOAD_SIZE` | none | Maximum file upload size in bytes |
 | `VITE_UPLOAD_CHUNK_SIZE` | none | Upload chunk size in bytes |
 | `VITE_FILEREAD_CHUNK_SIZE` | none | File read chunk size in bytes |
+
+## Runtime config
+
+A second tier of flags is read at page load from a global `APP_CONFIG` object served by `static/config.js`. Deployed environments overwrite the file via the Terraform ConfigMap; local Docker Compose uses the in-repo copy. Each key is optional, with a fallback baked into `src/lib/env.ts`.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `SITE_URL` | string | `https://postguard.eu` | Base URL used by sitemap, RSS, JSON-LD, and the `(app)` routes. Marketing pages are prerendered, so the baked-in fallback is what ships in their static HTML; a runtime override only takes effect on non-prerendered routes such as `/decrypt` and `/fileshare`. Added in [encryption4all/postguard-website#255](https://github.com/encryption4all/postguard-website/pull/255). |
+| `BUSINESS_URL` | string | `https://business.postguard.eu` | Link target for the "for Business" entry point. |
+| `FF_BUSINESS` | boolean | `false` | Feature flag that controls whether the business entry point is shown. |
+| `STAGING` | boolean | `false` | True on staging/dev where cryptify runs with `staging_mode = true` and does not send notification mail. The website renders an in-page preview of the would-be recipient email so developers can grab the download link without trawling cryptify logs. Added in [encryption4all/postguard-website#244](https://github.com/encryption4all/postguard-website/pull/244). |
+| `GLITCHTIP_DSN` | string | `""` | DSN for a Sentry-compatible error reporter (PostGuard runs GlitchTip). An empty value disables reporting at module load. The fileshare flow's `CrashReport` panel uses this to POST captured exceptions on user opt-in. Added in [encryption4all/postguard-website#247](https://github.com/encryption4all/postguard-website/pull/247). |
+
+The runtime tier exists because these values change per environment without rebuilding the static bundle. Override them by replacing `config.js` in the served container.
 
 ## Releasing
 
