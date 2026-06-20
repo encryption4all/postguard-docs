@@ -93,6 +93,7 @@ export default withMermaid(defineConfig({
             collapsed: false,
             items: [
               { text: 'pg-sveltekit', link: '/repos/pg-sveltekit' },
+              { text: 'pg-node', link: '/repos/pg-node' },
               { text: 'pg-dotnet', link: '/repos/pg-dotnet' },
               { text: 'pg-manual', link: '/repos/pg-manual' },
             ],

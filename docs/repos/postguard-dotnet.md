@@ -51,6 +51,14 @@ var result = await sealed.UploadAsync(new UploadOptions
 byte[] bytes = await sealed.ToBytesAsync();
 ```
 
+### Client version header
+
+The SDK sends an `X-POSTGUARD-CLIENT-VERSION` header on every PKG and Cryptify request so the servers can attribute traffic by SDK and version. The value has four comma-separated parts: `dotnet,<framework>,pg-dotnet,<version>`, where `<framework>` comes from `RuntimeInformation.FrameworkDescription` and `<version>` from the assembly version.
+
+The header is injected once on the SDK-owned `HttpClient`. A caller-supplied header (any casing) wins. If you bring your own `HttpClient`, the SDK does not mutate it, so you own its headers in that case.
+
+Source: [encryption4all/postguard-dotnet#33](https://github.com/encryption4all/postguard-dotnet/pull/33).
+
 ## Architecture
 
 ```
