@@ -32,6 +32,14 @@ const pg = new PostGuard({
 });
 ```
 
+### Client version header
+
+The SDK stamps an `X-POSTGUARD-CLIENT-VERSION` header onto every PKG and Cryptify request so the servers can attribute traffic by SDK and version. The value has four comma-separated parts: `host,host_version,pg-js,<version>`, where `host` is the detected runtime (`browser`, `node`, `bun`, or `deno`).
+
+You do not need to set it. If you pass your own `X-POSTGUARD-CLIENT-VERSION` in `headers` (any casing), it wins. Embedding hosts use this to report their own identity, for example the Outlook add-in reports `pg4ol`.
+
+Source: [encryption4all/postguard-js#90](https://github.com/encryption4all/postguard-js/pull/90).
+
 ## Architecture
 
 The SDK uses a lazy builder pattern. `pg.encrypt()` and `pg.open()` return builder objects that capture parameters but do no work. The actual operation runs when you call a terminal method.
