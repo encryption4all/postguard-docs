@@ -220,6 +220,10 @@ The upload is silent by default. Both recipient and sender mails are opt-in. Pas
 | `message` | `string` | `undefined` | Optional unencrypted text included in any mail sent |
 | `language` | `'EN' \| 'NL'` | `'EN'` | Notification email template language |
 
+The SDK validates the `notify` shape and throws `TypeError` for common misuse like `{ notify: true }`, a top-level `recipients`, or non-boolean values such as `{ recipients: 'yes' }`. Catch this in tests rather than at runtime.
+
+If `notify` is omitted on the first `sealed.upload()` for a given `PostGuard` instance, the SDK logs a one-time `console.info` reminding you that the upload is silent and how to opt in. Pass `{ recipients: false }` to acknowledge the silent intent and suppress the notice — the validator counts both as explicit shapes.
+
 ## Encrypt raw data
 
 For email addons, use `data` instead of `files`. The Thunderbird addon's crypto popup encrypts the full MIME message (body + attachments) as raw bytes, then wraps it in an email envelope:
