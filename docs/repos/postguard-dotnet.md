@@ -79,7 +79,7 @@ The SDK calls into the Rust `pg-ffi` native library for all cryptographic operat
 
 ### Prerequisites
 
-- .NET 8.0+ SDK
+- .NET 10.0+ SDK
 - Rust toolchain (for building the native library)
 
 ### Build the native library
