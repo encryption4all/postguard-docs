@@ -172,6 +172,7 @@ Both encryption and decryption support streaming (`ReadableStream`/`WritableStre
 |---|---|---|
 | `POST` | `/v2/request/start` | Start a Yivi identity verification session. Accepts attribute disclosure requirements. |
 | `GET` | `/v2/request/jwt/{token}` | Retrieve the JWT result of a completed Yivi session. |
+| `GET` | `/v2/request/statusevents/{token}` | Stream session status as Server-Sent Events, so clients watch for completion over one persistent connection instead of polling. Unauthenticated: the token is the session token and the stream carries only status events, no key material. |
 
 #### Key Issuance
 

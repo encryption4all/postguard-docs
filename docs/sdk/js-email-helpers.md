@@ -157,7 +157,7 @@ Prior to `@e4a/pg-js@2.0.0`, a tier 3 upload failure was swallowed and `createEn
 |-----------|------|----------|-------------|
 | `sealed` | `Sealed` | Yes | The Sealed encryption builder from `pg.encrypt()` |
 | `from` | `string` | Yes | Sender email address |
-| `websiteUrl` | `string` | No | URL to link in the placeholder body (default: `https://postguard.eu`) |
+| `websiteUrl` | `string` | No | URL to link in the placeholder body (default: `https://postguard.eu`). Must be an absolute `https:` URL. `createEnvelope` validates it, strips any trailing slash, and throws on a malformed or non-https value. |
 | `unencryptedMessage` | `string` | No | Unencrypted message shown in the placeholder |
 | `senderAttributes` | `string[]` | No | Verified sender attributes to display below the sender name |
 | `uploadToCryptify` | `boolean` | No | Default `true`. Set `false` to keep tier 2 envelopes as a local attachment only and skip the Cryptify upload + body link. Has no effect on tier 1 (no upload happens) or tier 3 (upload is always attempted because there is no fallback). |

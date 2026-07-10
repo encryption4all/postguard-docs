@@ -11,7 +11,7 @@ It shows two patterns:
 
 ## Prerequisites
 
-- .NET 8.0+ SDK
+- .NET 10.0+ SDK
 - Rust toolchain via [rustup](https://rustup.rs/) (for building the native crypto library)
 - A PostGuard API key
 

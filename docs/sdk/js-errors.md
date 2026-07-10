@@ -125,6 +125,7 @@ Thrown when:
 - The user declines disclosure in the Yivi app
 - The Yivi session times out
 - The Yivi session is aborted for any other non-success reason
+- `pg.sign.yivi(...)` is called from a non-browser runtime (Node, Bun, Deno). The QR widget needs a DOM, so the call fails fast before any session starts. Use `pg.sign.apiKey(...)` or `pg.sign.session(...)` from a server runtime.
 
 Affects both `pg.encrypt(...).upload()` and `pg.encrypt(...).toBytes()` when `pg.sign.yivi(...)` is used, and `pg.open(...).decrypt(...)` when a Yivi session backs the decryption.
 

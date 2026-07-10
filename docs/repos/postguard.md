@@ -211,6 +211,7 @@ The PKG server (`pg-pkg`) exposes an HTTP API. By default it listens on `http://
 |---|---|---|
 | `POST` | `/v2/irma/start` | Start a Yivi identity verification session. |
 | `GET` | `/v2/irma/jwt/{token}` | Retrieve the JWT result of a completed Yivi session. |
+| `GET` | `/v2/irma/statusevents/{token}` | Stream Yivi session status as Server-Sent Events, so clients watch for completion over one connection instead of polling. Unauthenticated: the token is the session token and the stream carries only status events, no key material. |
 
 Start a Yivi session with a request body like:
 
