@@ -80,7 +80,7 @@ When a request would push the sender over the per-upload or the rolling-window l
 
 `limit` is either `"per_upload"` or `"rolling_window"`. `resets_at` is an RFC 3339 timestamp for when the oldest counted upload expires from the rolling window. It is `null` for `per_upload` rejections, since the per-upload limit does not reset.
 
-`GET /usage` returns the current state for the authenticated sender, including `used_bytes`, `limit_bytes`, `per_upload_limit_bytes`, `window_days`, and `resets_at`. When the request includes a validated `Authorization: Bearer PG-…`, the response describes the per-tenant bucket (`api-key:<tenant>`); otherwise it describes the per-email bucket.
+`GET /usage` returns the current state for the caller, including `used_bytes`, `limit_bytes`, `per_upload_limit_bytes`, `window_days`, and `resets_at`. It requires a validated `Authorization: Bearer PG-…` API key and describes that key's per-tenant bucket (`api-key:<tenant>`). A missing or invalid key returns `401`; if the key cannot be confirmed because PKG is unreachable, the endpoint returns `503`. The `email` query parameter is optional and only echoed back in the response, it no longer selects which bucket is reported.
 
 <small>[Source: src/store.rs#L11-L15](https://github.com/encryption4all/cryptify/blob/58883a86b369af08d92db93aa1025f9eba3c73eb/src/store.rs#L11-L15)</small>
 
@@ -114,7 +114,23 @@ Cryptify exposes a file upload/download API. An OpenAPI 3.0 specification is ava
 - `POST /fileupload/finalize/{uuid}`: Finalize the upload (sends the recipient notification email if `notifyRecipients` was `true` on init).
 - `GET /fileupload/{uuid}/status`: Read rolling-token state to resume an in-flight upload across a page refresh or tab crash. Authenticated via `X-Recovery-Token`.
 - `GET /filedownload/{uuid}`: Download a file. Supports resumable downloads via the HTTP `Range` header (see [Range support on `/filedownload`](#range-support-on-filedownload) below).
+- `GET /email-template`: Return the email template pg-pkg has linked to the caller's API key. Authenticated with the same `Authorization: Bearer PG-…` key as the upload endpoints (see [Email template retrieval](#email-template-retrieval) below).
 - `GET /metrics`: Prometheus text-format metrics for monitoring (see [Metrics](#metrics) below). Unauthenticated; intended for scraping over a restricted network only.
+
+### Email template retrieval
+
+`GET /email-template` returns the email template that pg-pkg has linked to the caller's API key. The key is validated through the same `Authorization: Bearer PG-…` flow the upload endpoints use, so no separate auth path is involved.
+
+| Case | Status | Body |
+|---|---|---|
+| Valid key with a template configured | `200` | `{ tenant_id, email_template }` |
+| Missing or invalid key | `401` | error body |
+| Valid key, no template configured | `404` | error body |
+| PKG unreachable during validation | `503` | error body |
+
+The template is resolved on the PKG side and returned as-is, keyed on the validated tenant.
+
+<small>[Source: api-description.yaml#L434-L465](https://github.com/encryption4all/cryptify/blob/0946c066a805f1dad73c3966fb70b7aba90fea35/api-description.yaml#L434-L465)</small>
 
 ### `POST /fileupload/init` request body
 
