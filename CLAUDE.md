@@ -103,3 +103,52 @@ Do not start sentences with: "Moreover," "Furthermore," "Additionally," "Indeed,
 - Vary sentence length. Include some short sentences. Not every sentence needs a subordinate clause.
 - Specific over vague. Name tools, functions, files, and versions. "Use the `verify()` method" not "use the appropriate verification mechanism."
 - Keep stakes proportional to the subject matter. Documentation is helpful, not revolutionary.
+
+---
+
+## Agent notes (migrated from the dobby memory repo)
+
+## Overview
+VitePress site at docs.postguard.eu.
+
+## Build and dev
+- Node 22 works fine.
+- Never regenerate the lockfile with `npm install --legacy-peer-deps` here. CI's Dockerfile runs plain `npm ci`, which is strict: a `--legacy-peer-deps` install drops the optional `search-insights` peer from `package-lock.json`, so `npm ci` then fails with a missing-from-lockfile error and CI breaks. Plain `npm install` resolves cleanly with 0 vulnerabilities; `--legacy-peer-deps` is not needed. Always verify a dependency change with `rm -rf node_modules && npm ci && npm run docs:build` before pushing, since that's exactly what the Docker build does.
+- `npm run docs:build` to verify. `npm run docs:dev` (or `npx vitepress dev docs --port 5173`) to preview; `npx vitepress preview docs --port 4174` to preview a build.
+- The VitePress dev server returns a shell HTML page; content renders client-side, so `curl localhost:5173` only shows the SPA bootstrap. To verify content, check `docs/.vitepress/dist/` from `npm run docs:build`.
+- Mermaid renders client-side (`vitepress-plugin-mermaid` + `mermaid`, config wrapped with `withMermaid(defineConfig({...}))`); check built HTML for `class="mermaid"` to verify diagrams.
+
+## Dependency override: vitepress pins vite 5
+`npm audit` flags moderate advisories chained through `vitepress -> vite -> esbuild`. Don't try to bump `vitepress` to clear them: the latest stable vitepress line pins `vite ^5.4.14`, and the relevant vite patches were never backported to 5.x. The pre-release `vitepress@2.x` line pulls vite 7 but isn't stable yet, and `vitepress-plugin-mermaid` doesn't support vitepress 2.x yet either (re-check both statuses before relying on this section going stale).
+
+The fix is an `overrides` entry in `package.json` forcing patched transitive versions (`esbuild`, `vite`) even though vitepress declares an older peer; vitepress builds fine against the newer vite in practice. Drop the overrides once vitepress 2.x ships stable and vitepress-plugin-mermaid supports it. Until then, re-verify on each audit-flagged dependency bump that the override targets are still the patched floor.
+
+## Source-link conventions (binding)
+Code snippets must come from real working code in a source repo, with the link pinned to a full commit hash:
+```
+<small>[Source: file.ts#L20-L31](https://github.com/.../blob/HASH/path#L20-L31)</small>
+```
+Never invent examples. When fixing a source-link 404:
+1. `curl -sI` the candidate URL, proceed only if it returns HTTP 200.
+2. Fetch the file at that hash and confirm the snippet content actually matches the line range. A 200 just means the file exists; the snippet might still be wrong.
+3. If no commit matches the snippet, remove the example and replace it with prose pointing at the API page.
+
+## Deployment pipeline (no auto-deploy)
+`ci.yml` only builds and pushes a Docker image to `ghcr.io/encryption4all/postguard-docs:edge` on every push to `main`. There is no deploy step. Production (docs.postguard.eu) runs an nginx container serving `docs/.vitepress/dist`; whatever host runs it must pull the new `edge` image and restart the container, or it serves the stale build. To detect a stale deployment, check the `last-modified` header on `index.html` via `curl -I https://docs.postguard.eu/` against a known commit date on `main`.
+
+## postguard-examples drift (known gotcha)
+A past "consolidation" commit in postguard-examples flattened `pg-sveltekit/src/routes/download/` and `routes/send/` into a single top-level `+page.svelte`. Docs source-links pinned before that commit which point into those folders will 404. The pre-consolidation API form (`pg.decrypt({uuid, element, recipient})`) also differs from the post-consolidation one (`pg.open({uuid}).decrypt(...)`), so snippets cannot simply be repinned to a later hash without also updating the code shown.
+
+## Canonical PKG / Cryptify hosts
+Source of truth: `postguard-js/scripts/smoke.mjs`, `postguard-examples/pg-{node,dotnet,sveltekit}` configs.
+
+| Env | PKG | Cryptify |
+|---|---|---|
+| Staging | `pkg.staging.postguard.eu` | `storage.staging.postguard.eu` |
+| Production | `pkg.postguard.eu` | `storage.postguard.eu` |
+
+Aliases that should NOT be used in docs/snippets:
+- `pkg.staging.yivi.app`, `fileshare.staging.yivi.app`: resolve to the same IP but serve the Kubernetes placeholder cert, so real clients fail TLS validation.
+- `fileshare.postguard.eu`, `fileshare.staging.postguard.eu`: older Cryptify hostnames replaced by `storage.*`; the `fileshare.*` subdomains no longer serve `/health` on production.
+
+Quick verify: `curl -sI https://pkg.staging.postguard.eu/v2/parameters` returns HTTP 405 (real server, GET-only); `curl -sI https://storage.postguard.eu/health` returns 200.
