@@ -150,6 +150,7 @@ cargo run --release --bin pg-pkg server \
 | `PKG_RATELIMIT_SENSITIVE_BURST` | Burst allowance for the sensitive-endpoint limit. Also available as `--ratelimit-sensitive-burst`. | `10` |
 | `PKG_RATELIMIT_DISABLED` | Set to `true` to build the limiter in permissive mode (every request passes). Use behind a trusted proxy that does its own rate limiting. Also available as `--ratelimit-disabled`. | `false` |
 | `PKG_RATELIMIT_TRUST_FORWARDED_FOR` | Set to `true` to key the limiter on the rightmost `X-Forwarded-For` entry instead of the TCP peer address, so per-client limiting works behind a trusted reverse proxy. Off by default so a directly exposed PKG never trusts client-supplied headers. Also available as `--ratelimit-trust-forwarded-for`. | `false` |
+| `PKG_EMAIL_ATTRIBUTE` | Attribute type carrying the email in API-key signing identities. Production keeps the default. Test environments set a test-scheme type (e.g. `irma-demo.sidn-pbdf.email.email`), since `pbdf.*` credentials cannot be issued outside production. Must match cryptify's `email_attribute` and the SDK's `emailAttributes`. Also available as `--email-attribute`. | `pbdf.sidn-pbdf.email.email` |
 | `RUST_LOG` | Log level (`debug`, `info`, `warn`, `error`) | none |
 
 ### Running the PKG Server
