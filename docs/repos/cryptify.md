@@ -33,10 +33,11 @@ Configuration parameters:
 | `staging_mode` | When `true`, `send_email` skips SMTP entirely and logs the intended email metadata at info level. The upload finalize still returns `Ok`. Defaults to `false`. Intended for staging deploys where real email delivery is undesirable | `false` |
 | `usage_db` | Path to the SQLite database used for upload usage accounting | `/app/data/usage.db` |
 | `metrics_scan_interval_secs` | Interval in seconds for the background task that samples `data_dir` size and file count for the storage gauges exposed at `GET /metrics`. Defaults to `60`. | `60` |
+| `email_attribute` | Attribute type carrying the sender's email in the signing identity. Finalize requires this attribute to be present on the uploader's identity. Production keeps the default. Test environments override it with a test-scheme type. Must match the PKG's `PKG_EMAIL_ATTRIBUTE` and the SDK's `emailAttributes`. Defaults to `pbdf.sidn-pbdf.email.email`. | `irma-demo.sidn-pbdf.email.email` |
 
 The `chunk_size` setting caps the size of each `PUT /fileupload/{uuid}` body. Clients (such as `@e4a/pg-js` and the PostGuard website) use the same value for their upload chunks, so increasing it server-side without updating the client default will not produce larger chunks on its own.
 
-<small>[Source: src/config.rs#L3-L38](https://github.com/encryption4all/cryptify/blob/2af3ba0736ba138343295669411334af6f6de37a/src/config.rs#L3-L38)</small>
+<small>[Source: src/config.rs#L3-L22](https://github.com/encryption4all/cryptify/blob/e4a618249dee43d7fe9086844dc122186b3ea07f/src/config.rs#L3-L22)</small>
 
 ### Staging mode
 
