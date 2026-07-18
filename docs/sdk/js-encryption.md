@@ -268,6 +268,25 @@ const envelope = await pg.email.createEnvelope({
 
 Call `.toBytes()` to get the encrypted data, or pass the `Sealed` object directly to `pg.email.createEnvelope()` for email integration.
 
+## Prepare a signing session ahead of time
+
+With Yivi signing, `encrypt()` starts the disclosure session after the user acts. On iOS that is a problem: a Yivi Universal Link only opens the app when the navigation happens inside a genuine user gesture, and at tap time the app deep-link does not exist yet, so the tap falls back to Safari.
+
+`pg.prepareSign()` starts the Yivi session early. It returns `mobileUrl` (the app deep-link, resolved once Yivi shows its mobile button — put it on an `<a href>` so one tap opens the app), `keys` (resolves on disclosure), and `cancel()`. Pass the resolved keys to `encrypt()` via `signingKeys`; `encrypt()` then uses them directly and never starts a second session.
+
+```ts
+// when the compose form becomes valid:
+const prep = pg.prepareSign({ element: '#hidden-yivi', attributes: SIGN_ATTRS, includeSender: true });
+const href = await prep.mobileUrl;     // put on the "Send" <a href>
+// user taps the anchor -> Yivi app opens (one gesture)
+const signingKeys = await prep.keys;   // resolves after disclosure
+await pg.encrypt({ files, recipients, sign, signingKeys }).upload({ notify });
+```
+
+<small>[Source: types.ts#L116-L145](https://github.com/encryption4all/postguard-js/blob/f8bd16b154b79b92bb086c2c088f10e79babb7db/src/types.ts#L116-L145)</small>
+
+The disclosure is identity-bound (sender email plus optional attributes) and independent of the files and recipients, so the resolved keys are valid for whatever is ultimately encrypted. `sign` is still required alongside `signingKeys`: it supplies envelope metadata and the friendly-sender line when `includeSender` is set. `mobileUrl` only settles on mobile, where Yivi shows the app button; on desktop it stays pending, so race it with a timeout.
+
 ## Error handling
 
 All encryption methods can throw:
