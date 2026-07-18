@@ -126,6 +126,25 @@ What gets retried: 5xx responses, fetch-level network errors (`TypeError` from `
 
 The same `retry` config governs downloads. See [Decryption — Retries and resumable downloads](/sdk/js-decryption#retries-and-resumable-downloads).
 
+### Email attribute types
+
+The SDK uses the production `pbdf.sidn-pbdf.email` attribute types for recipient builders, key requests, and signing. Test setups that run against a different scheme can override these with `emailAttributes`:
+
+```ts
+const pg = new PostGuard({
+  pkgUrl: 'https://pkg.staging.postguard.eu',
+  cryptifyUrl: 'https://storage.staging.postguard.eu',
+  emailAttributes: {
+    email: 'irma-demo.sidn-pbdf.email.email',
+    domain: 'irma-demo.sidn-pbdf.email.domain',
+  },
+});
+```
+
+<small>[Source: types.ts#L7-L27](https://github.com/encryption4all/postguard-js/blob/854d5c06ea7c852e8ebb8517687d71f0349bfd51/src/types.ts#L7-L27)</small>
+
+Leave `emailAttributes` unset for production. An override must match the PKG's `PKG_EMAIL_ATTRIBUTE` and cryptify's `email_attribute`, or finalize and key issuance reject the identity.
+
 ## Resume an interrupted upload
 
 A long-running upload can be interrupted by a page refresh, tab crash, navigation away, or process restart. The SDK exposes two primitives for rehydrating an in-flight session from Cryptify rather than starting over: the `FileState` type and the `resumeUpload` function.
