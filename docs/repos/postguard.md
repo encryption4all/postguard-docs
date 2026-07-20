@@ -143,7 +143,14 @@ cargo run --release --bin pg-pkg server \
 |---|---|---|
 | `IRMA_SERVER` | Yivi/IRMA server URL | `https://is.yivi.app` |
 | `DATABASE_URL` | PostgreSQL connection string | none |
-| `PKG_ALLOWED_ORIGINS` | Comma-separated CORS allowlist (e.g. `https://postguard.eu,https://postguard.nl`). `*` keeps the legacy any-origin behaviour and logs a warning at startup. Also available as `--allowed-origins`. | `*` |
+| `PKG_ALLOWED_ORIGINS` | Comma-separated CORS allowlist (e.g. `https://postguard.eu,https://postguard.nl`). Required: the server refuses to start without it. Pass `*` to deliberately allow any origin (this logs a warning at startup). Also available as `--allowed-origins`. | required |
+| `PKG_RATELIMIT_PER_SECOND` | Sustained request rate per client IP for the whole `/v2` scope. Also available as `--ratelimit-per-second`. | `10` |
+| `PKG_RATELIMIT_BURST` | Burst allowance for the general `/v2` limit. Also available as `--ratelimit-burst`. | `50` |
+| `PKG_RATELIMIT_SENSITIVE_PER_SECOND` | Sustained request rate per client IP for the key-issuing endpoints (`POST /start`, `GET /key`, `GET /key/{timestamp}`, `POST /sign/key`, `GET /api-key/validate`). Also available as `--ratelimit-sensitive-per-second`. | `2` |
+| `PKG_RATELIMIT_SENSITIVE_BURST` | Burst allowance for the sensitive-endpoint limit. Also available as `--ratelimit-sensitive-burst`. | `10` |
+| `PKG_RATELIMIT_DISABLED` | Set to `true` to build the limiter in permissive mode (every request passes). Use behind a trusted proxy that does its own rate limiting. Also available as `--ratelimit-disabled`. | `false` |
+| `PKG_RATELIMIT_TRUST_FORWARDED_FOR` | Set to `true` to key the limiter on the rightmost `X-Forwarded-For` entry instead of the TCP peer address, so per-client limiting works behind a trusted reverse proxy. Off by default so a directly exposed PKG never trusts client-supplied headers. Also available as `--ratelimit-trust-forwarded-for`. | `false` |
+| `PKG_EMAIL_ATTRIBUTE` | Attribute type carrying the email in API-key signing identities. Production keeps the default. Test environments set a test-scheme type (e.g. `irma-demo.sidn-pbdf.email.email`), since `pbdf.*` credentials cannot be issued outside production. Must match cryptify's `email_attribute` and the SDK's `emailAttributes`. Also available as `--email-attribute`. | `pbdf.sidn-pbdf.email.email` |
 | `RUST_LOG` | Log level (`debug`, `info`, `warn`, `error`) | none |
 
 ### Running the PKG Server
@@ -254,6 +261,12 @@ Request body for signing keys:
 |---|---|---|
 | `GET` | `/health` | Health check. |
 | `GET` | `/metrics` | Prometheus metrics. |
+
+### Rate limiting
+
+The `/v2` scope is rate limited per client IP in two tiers. The general tier covers the whole scope; the sensitive tier covers the key-issuing endpoints (`POST /start`, `GET /key`, `GET /key/{timestamp}`, `POST /sign/key`, `GET /api-key/validate`) with a tighter limit, applied before authentication runs. Requests over the limit get `429 Too Many Requests` with a `Retry-After` header. The limits are global across worker processes and tunable through the `PKG_RATELIMIT_*` variables listed under [Environment Variables](#environment-variables).
+
+The limiter keys on the TCP peer address by default. When the PKG runs behind a trusted reverse proxy, set `PKG_RATELIMIT_TRUST_FORWARDED_FOR=true` so it keys on the rightmost `X-Forwarded-For` entry (the hop the trusted proxy appends) instead of the proxy's own address. Only the rightmost entry is trusted; anything left of it is client-supplied and spoofable.
 
 ### Authentication
 

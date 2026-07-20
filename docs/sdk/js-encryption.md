@@ -126,6 +126,25 @@ What gets retried: 5xx responses, fetch-level network errors (`TypeError` from `
 
 The same `retry` config governs downloads. See [Decryption — Retries and resumable downloads](/sdk/js-decryption#retries-and-resumable-downloads).
 
+### Email attribute types
+
+The SDK uses the production `pbdf.sidn-pbdf.email` attribute types for recipient builders, key requests, and signing. Test setups that run against a different scheme can override these with `emailAttributes`:
+
+```ts
+const pg = new PostGuard({
+  pkgUrl: 'https://pkg.staging.postguard.eu',
+  cryptifyUrl: 'https://storage.staging.postguard.eu',
+  emailAttributes: {
+    email: 'irma-demo.sidn-pbdf.email.email',
+    domain: 'irma-demo.sidn-pbdf.email.domain',
+  },
+});
+```
+
+<small>[Source: types.ts#L7-L27](https://github.com/encryption4all/postguard-js/blob/854d5c06ea7c852e8ebb8517687d71f0349bfd51/src/types.ts#L7-L27)</small>
+
+Leave `emailAttributes` unset for production. An override must match the PKG's `PKG_EMAIL_ATTRIBUTE` and cryptify's `email_attribute`, or finalize and key issuance reject the identity.
+
 ## Resume an interrupted upload
 
 A long-running upload can be interrupted by a page refresh, tab crash, navigation away, or process restart. The SDK exposes two primitives for rehydrating an in-flight session from Cryptify rather than starting over: the `FileState` type and the `resumeUpload` function.
@@ -248,6 +267,25 @@ const envelope = await pg.email.createEnvelope({
 <small>[Source: yivi-popup.ts#L90-L136](https://github.com/encryption4all/postguard-tb-addon/blob/26b8433efc8997bc1fe614f532caf17fb94b4a70/src/pages/yivi-popup/yivi-popup.ts#L90-L136)</small>
 
 Call `.toBytes()` to get the encrypted data, or pass the `Sealed` object directly to `pg.email.createEnvelope()` for email integration.
+
+## Prepare a signing session ahead of time
+
+With Yivi signing, `encrypt()` starts the disclosure session after the user acts. On iOS that is a problem: a Yivi Universal Link only opens the app when the navigation happens inside a genuine user gesture, and at tap time the app deep-link does not exist yet, so the tap falls back to Safari.
+
+`pg.prepareSign()` starts the Yivi session early. It returns `mobileUrl` (the app deep-link, resolved once Yivi shows its mobile button — put it on an `<a href>` so one tap opens the app), `keys` (resolves on disclosure), and `cancel()`. Pass the resolved keys to `encrypt()` via `signingKeys`; `encrypt()` then uses them directly and never starts a second session.
+
+```ts
+// when the compose form becomes valid:
+const prep = pg.prepareSign({ element: '#hidden-yivi', attributes: SIGN_ATTRS, includeSender: true });
+const href = await prep.mobileUrl;     // put on the "Send" <a href>
+// user taps the anchor -> Yivi app opens (one gesture)
+const signingKeys = await prep.keys;   // resolves after disclosure
+await pg.encrypt({ files, recipients, sign, signingKeys }).upload({ notify });
+```
+
+<small>[Source: types.ts#L116-L145](https://github.com/encryption4all/postguard-js/blob/f8bd16b154b79b92bb086c2c088f10e79babb7db/src/types.ts#L116-L145)</small>
+
+The disclosure is identity-bound (sender email plus optional attributes) and independent of the files and recipients, so the resolved keys are valid for whatever is ultimately encrypted. `sign` is still required alongside `signingKeys`: it supplies envelope metadata and the friendly-sender line when `includeSender` is set. `mobileUrl` only settles on mobile, where Yivi shows the app button; on desktop it stays pending, so race it with a timeout.
 
 ## Error handling
 
