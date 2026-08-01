@@ -239,9 +239,9 @@ The upload is silent by default. Both recipient and sender mails are opt-in. Pas
 | `message` | `string` | `undefined` | Optional unencrypted text included in any mail sent |
 | `language` | `'EN' \| 'NL'` | `'EN'` | Notification email template language |
 
-The SDK validates the `notify` shape and throws `TypeError` for common misuse like `{ notify: true }`, a top-level `recipients`, or non-boolean values such as `{ recipients: 'yes' }`. Catch this in tests rather than at runtime.
+There is no runtime validator on the `notify` shape, so a wrong shape fails quietly. `{ notify: true }` is the one to watch: `delivery?.recipients` on a boolean is `undefined`, the wire field `notifyRecipients` falls back to `false`, and no mail is sent. It is worse than omitting `notify`, because it also counts as an explicit choice and so suppresses the notice below. Write `{ notify: { recipients: true } }`.
 
-If `notify` is omitted on the first `sealed.upload()` for a given `PostGuard` instance, the SDK logs a one-time `console.info` reminding you that the upload is silent and how to opt in. Pass `{ recipients: false }` to acknowledge the silent intent and suppress the notice — the validator counts both as explicit shapes.
+If `notify` is omitted on the first `sealed.upload()` for a given `PostGuard` instance, the SDK logs a one-time `console.info` reminding you that the upload is silent and how to opt in. Passing `notify` at all suppresses that notice, so use `{ recipients: false }` when you mean silence.
 
 ## Encrypt raw data
 
