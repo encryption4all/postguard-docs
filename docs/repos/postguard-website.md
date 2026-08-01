@@ -1,6 +1,8 @@
 # postguard-website
 
-[GitHub](https://github.com/encryption4all/postguard-website) · SvelteKit · Web Application
+[GitHub](https://github.com/encryption4all/postguard-js/tree/main/apps/website) · SvelteKit · Web Application
+
+Lives at `apps/website` in the [postguard-js](https://github.com/encryption4all/postguard-js) workspace. The standalone `postguard-website` repository is archived.
 
 The PostGuard web frontend for encrypting and sending files. Users pick files, choose recipients by email address, authenticate with [Yivi](https://yivi.app), and the files are encrypted and uploaded to [Cryptify](/repos/cryptify) for delivery. Built with SvelteKit using the static adapter.
 

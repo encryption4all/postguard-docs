@@ -1,8 +1,8 @@
 # pg-sveltekit
 
-[GitHub](https://github.com/encryption4all/postguard-examples/tree/main/pg-sveltekit) · TypeScript · SvelteKit Example
+[GitHub](https://github.com/encryption4all/postguard-js/tree/main/examples/pg-sveltekit) · TypeScript · SvelteKit Example
 
-A SvelteKit application demonstrating PostGuard file encryption and decryption in a web browser using `@e4a/pg-js`. Part of the [postguard-examples](https://github.com/encryption4all/postguard-examples) repository.
+A SvelteKit application demonstrating PostGuard file encryption and decryption in a web browser using `@e4a/pg-js`. Lives at `examples/pg-sveltekit` in the [postguard-js](https://github.com/encryption4all/postguard-js) workspace and builds against the in-tree SDK. The `postguard-examples` repository is archived.
 
 ## Running
 

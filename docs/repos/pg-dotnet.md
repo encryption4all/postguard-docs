@@ -1,8 +1,8 @@
 # pg-dotnet
 
-[GitHub](https://github.com/encryption4all/postguard-examples/tree/main/pg-dotnet) · C# · .NET Example
+[GitHub](https://github.com/encryption4all/postguard-js/tree/main/examples/pg-dotnet) · C# · .NET Example
 
-A .NET console application demonstrating the [postguard-dotnet](/repos/postguard-dotnet) SDK for the "Informatierijk notificeren" use case. Part of the [postguard-examples](https://github.com/encryption4all/postguard-examples) repository.
+A .NET console application demonstrating the [postguard-dotnet](/repos/postguard-dotnet) SDK for the "Informatierijk notificeren" use case. Lives at `examples/pg-dotnet` in the [postguard-js](https://github.com/encryption4all/postguard-js) workspace. The `postguard-examples` repository is archived.
 
 It shows two patterns:
 
