@@ -10,9 +10,11 @@ Snippets are pasted inline as fenced code blocks with a `<small>` source link un
 
 Source repositories:
 
-- `encryption4all/postguard-examples` (SvelteKit web app example)
-- `encryption4all/postguard-tb-addon` (Thunderbird addon)
-- `encryption4all/postguard-outlook-addon` (Outlook addon)
+- `encryption4all/postguard-js` (pnpm workspace): `packages/pg-js` (SDK), `apps/website`, `apps/tb-addon`, `apps/outlook-addon`, `examples/*`
+- `encryption4all/postguard` (Cargo workspace): `pg-core`, `pg-pkg`, `pg-cli`, `pg-ffi`, `cryptify`
+- `encryption4all/postguard-dotnet` (.NET SDK)
+
+The old `postguard-examples`, `postguard-website`, `postguard-tb-addon` and `postguard-outlook-addon` repositories are archived. Pinned-commit links already in the docs still resolve, but new snippets must come from the workspace paths above.
 
 When adding or updating a snippet:
 

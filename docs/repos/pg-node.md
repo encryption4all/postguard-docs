@@ -1,8 +1,8 @@
 # pg-node
 
-[GitHub](https://github.com/encryption4all/postguard-examples/tree/main/pg-node) · JavaScript · Node.js Example
+[GitHub](https://github.com/encryption4all/postguard-js/tree/main/examples/pg-node) · JavaScript · Node.js Example
 
-A plain Node.js CLI example showing how to use [`@e4a/pg-js`](/repos/postguard-js) from a server runtime. Part of the [postguard-examples](https://github.com/encryption4all/postguard-examples) repository.
+A plain Node.js CLI example showing how to use [`@e4a/pg-js`](/repos/postguard-js) from a server runtime. Lives at `examples/pg-node` in the [postguard-js](https://github.com/encryption4all/postguard-js) workspace and builds against the in-tree SDK. The `postguard-examples` repository is archived.
 
 Mirrors the [pg-sveltekit](/repos/pg-sveltekit) "Informatierijk notificeren" flow (citizen exact-email recipient + organisation email-domain recipient) as a CLI script.
 

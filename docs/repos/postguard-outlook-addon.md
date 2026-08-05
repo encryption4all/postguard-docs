@@ -1,6 +1,8 @@
 # postguard-outlook-addon
 
-[GitHub](https://github.com/encryption4all/postguard-outlook-addon) · TypeScript · Outlook Add-in
+[GitHub](https://github.com/encryption4all/postguard-js/tree/main/apps/outlook-addon) · TypeScript · Outlook Add-in
+
+Lives at `apps/outlook-addon` in the [postguard-js](https://github.com/encryption4all/postguard-js) workspace, which also builds and publishes its images. The standalone `postguard-outlook-addon` repository is archived.
 
 Identity-based email encryption add-in for Microsoft Outlook. Built as an Office Web Add-in using Office.js, PostGuard WASM, and Yivi authentication. Targets new Outlook on Windows (WebView2), Outlook on the web, and Outlook on macOS (taskpane flow only), Mailbox 1.12+. The one-click OnSend flow runs on Windows and the web; Outlook for Mac native uses the taskpane "Encrypt & Send" button instead. See the per-platform matrix below.
 

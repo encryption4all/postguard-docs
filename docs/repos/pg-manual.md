@@ -1,8 +1,8 @@
 # pg-manual
 
-[GitHub](https://github.com/encryption4all/postguard-examples/tree/main/pg-manual) · JavaScript · WASM Example
+[GitHub](https://github.com/encryption4all/postguard-js/tree/main/examples/pg-manual) · JavaScript · WASM Example
 
-A webpack-bundled browser example that uses the low-level `@e4a/pg-wasm` module directly, without the `@e4a/pg-js` SDK. Part of the [postguard-examples](https://github.com/encryption4all/postguard-examples) repository.
+A webpack-bundled browser example that uses the low-level `@e4a/pg-wasm` module directly, without the `@e4a/pg-js` SDK. Lives at `examples/pg-manual` in the [postguard-js](https://github.com/encryption4all/postguard-js) workspace. The `postguard-examples` repository is archived.
 
 Use this example when you want to see what `@e4a/pg-js` wraps. It calls the WASM bindings, the PKG HTTP API, and a Yivi popup directly. For application code, prefer the SDK shown in [pg-sveltekit](/repos/pg-sveltekit); the manual flow is here for reference and for projects that cannot use the SDK.
 
