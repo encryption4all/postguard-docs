@@ -394,25 +394,29 @@ To load the extension in Thunderbird: open **Add-ons Manager** > **gear icon** >
 
 ## Releasing
 
-The version must be updated in three files before releasing:
+Releases come out of the [postguard-js](https://github.com/encryption4all/postguard-js) workspace, from `apps/tb-addon`. The standalone `postguard-tb-addon` repository is archived and releases nothing.
 
-1. `package.json` (`"version"`)
-2. `manifest.json` (`"version"`)
-3. `updates.json` (add a new entry with the new version)
+Versions are set by [changesets](https://github.com/changesets/changesets), which bumps `package.json` only. Thunderbird reads `manifest.json` and the auto-update channel reads `updates.json`, so `pnpm --filter postguard-tb-addon sync-version` propagates the version into both, and `pnpm check-version` fails the PR when they drift. The release job refuses a tag that does not match.
 
-Then commit, push, and tag:
+Release tags are **app-scoped**: `tb-addon-v0.9.4`, never `v*`. The tag namespace is shared with `@e4a/pg-js`'s changesets releases (and still holds the pre-monorepo `v2.3.3`-style pg-js tags), so a bare `v*` trigger would fire on another package's release.
 
-```bash
-git add package.json manifest.json updates.json
-git commit -m "Bump version to X.Y.Z"
-git push origin main
-git tag vX.Y.Z && git push origin vX.Y.Z
+### The auto-update channel
+
+Installed add-ons poll the `update_url` baked into the build they are running. For 0.9.4 onward that is the raw file on the monorepo's default branch:
+
+```
+https://raw.githubusercontent.com/encryption4all/postguard-js/main/apps/tb-addon/updates.json
 ```
 
-Pushing a `v*` tag triggers the CI pipeline which builds the `.xpi` file and creates a GitHub release.
+It is deliberately **not** a release asset. `releases/latest` in a repo shared with `@e4a/pg-js` is whichever package released most recently, and a pg-js release carries no `updates.json` at all.
+
+Everything up to 0.9.3 baked in `postguard-tb-addon/releases/latest/download/updates.json` instead — the archived repo. Those installs are carried across by a single release there, tagged `channel-migration-0.9.4`, whose `updates.json` advertises 0.9.4 with an `update_link` into postguard-js. Taking that update moves the add-on onto the new channel permanently. The tag deliberately does not start with `v` so the old repository's build workflow did not fire for it, and the release ships no `.xpi` — it exists only to move the channel. This is why archiving a repo that hosts a self-hosted add-on update channel has to be preceded by one last publish from it; archive first and every installed add-on stops updating with no error.
 
 ## CI/CD
 
-| Workflow | Trigger | What it does |
-|---|---|---|
-| `build.yml` | Tag push (`v*`) | Validates version consistency, builds, packages `.xpi`, creates GitHub release |
+Workflow: `.github/workflows/tb-addon.yml` in postguard-js.
+
+| Trigger | What it does |
+|---|---|
+| PR / push to `main` | `pnpm check-version`, typecheck, tests, build the extension. Deliberately not path-filtered, so an SDK change in `packages/pg-js` is tested against the add-on in the same PR |
+| Tag push (`tb-addon-v*`) | Packages the `.xpi` and creates the GitHub release carrying it and `updates.json` |

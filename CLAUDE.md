@@ -138,11 +138,14 @@ Never invent examples. When fixing a source-link 404:
 ### Deployment pipeline (no auto-deploy)
 `ci.yml` only builds and pushes a Docker image to `ghcr.io/encryption4all/postguard-docs:edge` on every push to `main`. There is no deploy step. Production (docs.postguard.eu) runs an nginx container serving `docs/.vitepress/dist`; whatever host runs it must pull the new `edge` image and restart the container, or it serves the stale build. To detect a stale deployment, check the `last-modified` header on `index.html` via `curl -I https://docs.postguard.eu/` against a known commit date on `main`.
 
+### `{{ }}` in prose breaks the build, even inside backticks
+VitePress compiles every page as a Vue SFC, so `{{ ... }}` is a template interpolation wherever it appears — **including inside an inline code span**. Writing `` `${{ github.repository }}` `` while documenting a GitHub Actions expression fails `npm run docs:build` with `Cannot read properties of undefined (reading 'repository')` and a Vue server-renderer stack trace naming `.vitepress/.temp/<page>.md.js`, which points at the compiled temp file rather than the line you wrote. Name the context instead (`the workflow's github.repository context`), or wrap the span in `<span v-pre>`. A fenced code block is safe; an inline span is not. Always run `npm run docs:build` before pushing — this class of error does not show up in review.
+
 ### postguard-examples drift (known gotcha)
 A past "consolidation" commit in postguard-examples flattened `pg-sveltekit/src/routes/download/` and `routes/send/` into a single top-level `+page.svelte`. Docs source-links pinned before that commit which point into those folders will 404. The pre-consolidation API form (`pg.decrypt({uuid, element, recipient})`) also differs from the post-consolidation one (`pg.open({uuid}).decrypt(...)`), so snippets cannot simply be repinned to a later hash without also updating the code shown.
 
 ### Canonical PKG / Cryptify hosts
-Source of truth: `postguard-js/scripts/smoke.mjs`, `postguard-examples/pg-{node,dotnet,sveltekit}` configs.
+Source of truth: `postguard-js/scripts/smoke.mjs`, `postguard-js/examples/pg-{node,dotnet,sveltekit}` configs (that second path was `postguard-examples/pg-*` before the repo was folded in and archived).
 
 | Env | PKG | Cryptify |
 |---|---|---|

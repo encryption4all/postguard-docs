@@ -2,7 +2,9 @@
 
 [GitHub](https://github.com/encryption4all/postguard/tree/main/cryptify) · Rust · File Sharing Service
 
-The source lives at `cryptify/` in the [postguard](https://github.com/encryption4all/postguard) Cargo workspace, compiled against the in-tree `pg-core`. The [cryptify](https://github.com/encryption4all/cryptify) repository still builds and publishes the `ghcr.io/encryption4all/cryptify` image; moving that is a separate ops change.
+The source lives at `cryptify/` in the [postguard](https://github.com/encryption4all/postguard) Cargo workspace, compiled against the in-tree `pg-core`. That workspace's `delivery.yml` is now the **sole** publisher of the `ghcr.io/encryption4all/cryptify` image, unconditionally since [postguard#293](https://github.com/encryption4all/postguard/pull/293); the standalone `encryption4all/cryptify` repository had its build and push jobs retired and is archived. The GHCR package name did not change, so nothing downstream had to be repointed.
+
+One gap to know about when pinning a version. `cryptify-v0.1.28` was released from the workspace before that publish job existed, so **no `0.1.28` image was ever built**, and it cannot be produced by re-running anything. The highest semver tag in the registry is `0.1.27`, pushed by the now-archived repo. `edge` tracks `main` and is current. See [postguard#312](https://github.com/encryption4all/postguard/issues/312).
 
 Cryptify is the file encryption and sharing service that PostGuard uses for delivering encrypted files. It allows encrypting any file with an identity attribute. Only people who can prove they have that attribute can decrypt and view the contents.
 

@@ -10,11 +10,15 @@ The PostGuard web frontend for encrypting and sending files. Users pick files, c
 
 The website uses `@e4a/pg-js` with two Vite plugins for WASM support (`vite-plugin-wasm` and `vite-plugin-top-level-await`).
 
-The website contains two submodules: Cryptify (the file sharing backend, embedded in an iframe) and the Thunderbird addon (the `.xpi` file can be downloaded from the website). To update the submodules:
+`apps/website` carries two git submodules, used by the local dev stack rather than by the built site: `cryptify` and `postguard`. Initialise them with:
 
 ```bash
 git submodule update --init --recursive
 ```
+
+Note that the `cryptify` submodule still points at `encryption4all/cryptify`, which is archived — the service is a member of the [postguard](/repos/postguard) workspace now, so that pin can never advance. Tracked in [encryption4all/postguard-js#225](https://github.com/encryption4all/postguard-js/issues/225).
+
+The Thunderbird `.xpi` is **not** a submodule. `scripts/sync-addons.mjs` mirrors the add-on release artifacts into `static/downloads/` — the `.xpi` from the monorepo's `tb-addon-v*` releases and the Outlook `manifest.xml` from its `outlook-addin-v*` releases — refreshing on a 6h interval inside the container.
 
 For a step-by-step example of building a web application with PostGuard, see the [pg-sveltekit](/repos/pg-sveltekit) example, which follows the same patterns as this website.
 
@@ -155,11 +159,15 @@ The runtime tier exists because these values change per environment without rebu
 
 ## Releasing
 
-This repository uses [Release-please](https://github.com/googleapis/release-please) for automated versioning. Merging a release PR triggers a multi-architecture Docker image build pushed to GHCR.
+Releases come out of the [postguard-js](https://github.com/encryption4all/postguard-js) workspace via `.github/workflows/website.yml`. Versioning is [changesets](https://github.com/changesets/changesets), not release-please, and the standalone `postguard-website` repository is archived and releases nothing.
+
+The image is `ghcr.io/encryption4all/postguard-website` — the same GHCR package name the standalone repo published, hardcoded in the workflow rather than derived from the `github.repository` context (which resolves to `postguard-js`) precisely so [postguard-ops](https://github.com/privacybydesign/postguard-ops)' pin keeps working. Publishing happens on `main` only; PRs build without pushing.
 
 ## CI/CD
 
-| Workflow | Trigger | What it does |
-|---|---|---|
-| `ci.yml` | Push/PR | Svelte type checks, release-please, multi-arch Docker build |
-| `pr-title.yml` | PR | Validates PR title format |
+Workflow: `.github/workflows/website.yml` in postguard-js. Deliberately not path-filtered to `apps/website/**`, so an SDK change in `packages/pg-js` is tested against the site in the same PR.
+
+| Trigger | What it does |
+|---|---|
+| PR / push to `main` | Svelte type checks, lint, CSS custom-property lint, unit tests, and an nginx config syntax test over both `docker/nginx.dev.conf` and `docker/default.conf.template` |
+| Push to `main` | Multi-arch Docker build pushed to GHCR (`:edge`, plus the changesets version on a release commit) |
