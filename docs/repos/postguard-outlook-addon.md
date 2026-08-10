@@ -158,12 +158,14 @@ Production hosts and PKG / Cryptify URLs are baked in at Docker build time via t
 
 ## Releasing
 
-Releases run on every push to `master` via `.github/workflows/release.yml`:
+Releases come out of the [postguard-js](https://github.com/encryption4all/postguard-js) workspace, from `apps/outlook-addon`, via `.github/workflows/outlook-addon.yml`. The standalone `postguard-outlook-addon` repository is archived: it releases nothing and its `release.yml` cannot run.
 
-1. `googleapis/release-please-action` watches conventional commits and opens a release PR. Merging that PR cuts a tagged release.
-2. On non-release pushes, CI builds and pushes `ghcr.io/encryption4all/postguard-outlook-addon:edge` (and a `sha-<commit>` tag) using staging hosts.
-3. On release pushes, CI builds the same image with production hosts and tags it with the released version.
+1. [changesets](https://github.com/changesets/changesets) sets the version. It bumps `package.json` only, so `pnpm --filter postguard-outlook-addin sync-version` propagates it into `manifest.xml`'s `<Version>`.
+2. On PRs and pushes to `main`, CI builds and pushes `ghcr.io/encryption4all/postguard-outlook-addon:edge` (plus a `sha-<commit>` tag) using staging hosts.
+3. Pushing an **app-scoped** tag — `outlook-addin-v1.0.0`, never `v*`, because the tag namespace is shared with `@e4a/pg-js`'s changesets releases — builds the same image with production hosts, tags it with the released version, and creates a GitHub release carrying `manifest.xml` as an asset.
+
+The image name is hardcoded rather than derived from the workflow's `github.repository` context, which resolves to `postguard-js` while [postguard-ops](https://github.com/privacybydesign/postguard-ops) pins `ghcr.io/encryption4all/postguard-outlook-addon`. The GHCR package name did not change on the move, so nothing downstream had to be repointed.
 
 The image is an NGINX container serving the built add-in over HTTPS. To deploy, pull the new tag and restart the container on the host serving `addin.postguard.eu` (or `addin.staging.postguard.eu` for `:edge`). There is no automatic deploy step in CI today.
 
-The Office add-in store submission and admin-center deployment still happen out of band against the published manifest.
+The Office add-in store submission and admin-center deployment still happen out of band against the published manifest. Point them at the monorepo's `outlook-addin-v*` releases. The archived repository's `releases/latest/download/manifest.xml` still resolves and still serves v0.5.0's manifest, and it always will — an archived repo keeps serving its release assets, so anything left pointing there is frozen with no error to notice.
