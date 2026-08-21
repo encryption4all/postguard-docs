@@ -18,6 +18,14 @@ The crate contains both identity-based encryption schemes (IBEs, in `src/pke`) a
 
 References to the original papers appear in the respective source files.
 
+## Design Notes
+
+- PostGuard's production build enables only the `cgwkv` and `mkem` features.
+- An identity is SHA3-512 over the input (64 bytes), mapped to a scalar with `Scalar::from_bytes_wide`.
+- A shared secret is SHAKE256 over the compressed `Gt` element, 32 bytes (`kem::SS_BYTES`).
+- `mkem` encrypts one random session key per recipient with AES-128-GCM, keyed by HKDF-SHA256 over the encapsulated shared secret.
+- BLS12-381 places the schemes at roughly 127 bits of security.
+
 ## Technical Notes
 
 - This implementation has not been audited. Use at your own risk.
@@ -40,6 +48,7 @@ References to the original papers appear in the respective source files.
 | `waters` | Waters IBE scheme |
 | `waters_naccache` | Waters-Naccache IBE scheme |
 | `mkem` | Multi-user key encapsulation |
+| `zeroize` | `Zeroize` impls on the secret-bearing types. The types are `Copy`, so nothing is cleared on drop and callers must call `.zeroize()` themselves. |
 
 ## Development
 
@@ -57,7 +66,7 @@ cargo test --release --all-features
 
 ## Releasing
 
-Versions are published manually to crates.io.
+Versions are published manually to crates.io. `release-plz.toml` sits in the repository root, but the `release-plz.yml` workflow it needs is not there yet, so the automation is not live.
 
 ## CI/CD
 
