@@ -8,6 +8,7 @@
     "docs:preview": "vitepress preview docs",
     "check:links": "node scripts/check-source-links.mjs",
     "check:claude-md": "node scripts/check-claude-md.mjs",
+    "test": "node --test",
     "predocs:build": "node scripts/check-claude-md.mjs"
   },
   "devDependencies": {

@@ -13,45 +13,68 @@
 
 import { readFile } from "node:fs/promises";
 import { join, dirname } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const CLAUDE_MD = join(dirname(fileURLToPath(import.meta.url)), "..", "CLAUDE.md");
 
-const MAX_BYTES = 4000;
+export const MAX_BYTES = 4000;
 
 // The corpus grew under these headings, so the regression is named rather than
 // left to the byte count alone: any one of them returning is the same failure
-// starting over, whatever the file weighs.
+// starting over, whatever the file weighs. Each entry is the stem the heading
+// was built on, not the heading as it was written -- whoever restores a section
+// retitles it on the way ("Writing style", "Agent notes"), and a gate that only
+// knows the old wording waves all of those through.
 const DELETED_SECTIONS = [
-  "Code Snippets",
-  "Writing Style Rules",
-  "Agent notes (migrated from the dobby memory repo)",
+  { stem: "code snippets", page: "the snippet conventions" },
+  { stem: "writing style", page: "the writing style rules" },
+  { stem: "agent notes", page: "the agent notes" },
 ];
 
-const body = await readFile(CLAUDE_MD, "utf8");
-const bytes = Buffer.byteLength(body, "utf8");
-const problems = [];
+// Compared on letters and digits alone, so case, punctuation and heading level
+// cannot smuggle a section back in.
+const normalise = (heading) => heading.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 
-if (bytes > MAX_BYTES) {
-  problems.push(
-    `CLAUDE.md is ${bytes} B, over the ${MAX_BYTES} B cap. Move the detail to ` +
-      `docs/repos/postguard-docs.md, or file it as a rule if it is a check an agent has to run.`,
-  );
-}
+export function problemsFor(body) {
+  const problems = [];
+  const bytes = Buffer.byteLength(body, "utf8");
 
-const headings = [...body.matchAll(/^#{2,6} (.+)$/gm)].map(([, h]) => h.trim());
-for (const section of DELETED_SECTIONS) {
-  if (headings.includes(section)) {
+  if (bytes > MAX_BYTES) {
     problems.push(
-      `CLAUDE.md has a "${section}" heading again. That section moved to ` +
-        `docs/repos/postguard-docs.md; link to it instead of restoring it here.`,
+      `CLAUDE.md is ${bytes} B, over the ${MAX_BYTES} B cap. Move the detail to ` +
+        `docs/repos/postguard-docs.md, or file it as a rule if it is a check an agent has to run.`,
     );
   }
+
+  const headings = [...body.matchAll(/^#{1,6}\s+(.+)$/gm)].map(([, text]) => ({
+    text: text.trim(),
+    normalised: normalise(text),
+  }));
+
+  for (const { stem, page } of DELETED_SECTIONS) {
+    const hit = headings.find((heading) => heading.normalised.includes(stem));
+    if (hit) {
+      problems.push(
+        `CLAUDE.md has a "${hit.text}" heading again. That section moved to ` +
+          `docs/repos/postguard-docs.md (${page}); link to it instead of restoring it here.`,
+      );
+    }
+  }
+
+  return problems;
 }
 
-if (problems.length > 0) {
-  for (const problem of problems) console.error(`error: ${problem}`);
-  process.exit(1);
-}
+// Only runs the check when invoked as a script; the test imports problemsFor.
+if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
+  const body = await readFile(CLAUDE_MD, "utf8");
+  const problems = problemsFor(body);
 
-console.log(`CLAUDE.md is ${bytes} B, within the ${MAX_BYTES} B orientation cap.`);
+  if (problems.length > 0) {
+    for (const problem of problems) console.error(`error: ${problem}`);
+    process.exit(1);
+  }
+
+  console.log(
+    `CLAUDE.md is ${Buffer.byteLength(body, "utf8")} B, within the ${MAX_BYTES} B orientation cap.`,
+  );
+}

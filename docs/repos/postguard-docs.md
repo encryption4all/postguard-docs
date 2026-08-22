@@ -144,4 +144,6 @@ curl -I https://docs.postguard.eu/
 
 ## Agent orientation
 
-`CLAUDE.md` in this repo is orientation only: what the repo is, where it sits, and which repos a change here touches. It is capped at 4,000 bytes by `npm run check:claude-md`. Detail belongs on this page; a durable check for an agent belongs in the agent rule bundle.
+`CLAUDE.md` in this repo is orientation only: what the repo is, where it sits, and which repos a change here touches. Detail belongs on this page; a durable check for an agent belongs in the agent rule bundle.
+
+`npm run check:claude-md` holds it to that. It fails over 4,000 bytes, and also when a heading matching one of the cut sections comes back, because a small file can still be a junk drawer. The heading match ignores case, punctuation and heading level, so retitling a section does not get it past the gate. `npm test` covers both branches.
