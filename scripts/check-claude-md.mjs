@@ -26,9 +26,9 @@ export const MAX_BYTES = 4000;
 // retitles it on the way ("Writing style", "Agent notes"), and a gate that only
 // knows the old wording waves all of those through.
 const DELETED_SECTIONS = [
-  { stem: "code snippets", page: "the snippet conventions" },
-  { stem: "writing style", page: "the writing style rules" },
-  { stem: "agent notes", page: "the agent notes" },
+  { stem: "code snippets", went: "docs/repos/postguard-docs.md#code-snippets" },
+  { stem: "writing style", went: "docs/repos/postguard-docs.md#writing-style" },
+  { stem: "agent notes", went: "the agent rule bundle, as one rule per check" },
 ];
 
 // Compared on letters and digits alone, so case, punctuation and heading level
@@ -51,12 +51,12 @@ export function problemsFor(body) {
     normalised: normalise(text),
   }));
 
-  for (const { stem, page } of DELETED_SECTIONS) {
+  for (const { stem, went } of DELETED_SECTIONS) {
     const hit = headings.find((heading) => heading.normalised.includes(stem));
     if (hit) {
       problems.push(
-        `CLAUDE.md has a "${hit.text}" heading again. That section moved to ` +
-          `docs/repos/postguard-docs.md (${page}); link to it instead of restoring it here.`,
+        `CLAUDE.md has a "${hit.text}" heading again. That section moved to ${went}; ` +
+          `restoring it here undoes the cut.`,
       );
     }
   }

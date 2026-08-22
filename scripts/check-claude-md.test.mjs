@@ -1,7 +1,7 @@
 // Regression test for the CLAUDE.md orientation gate.
 //
-// Node's built-in test runner, no dependency to install, same constraint the
-// two scripts under test hold themselves to.
+// Node's built-in test runner, so it needs no dependency installed -- the same
+// constraint the script under test holds itself to.
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
