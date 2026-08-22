@@ -78,7 +78,7 @@ Name the context in prose instead (the workflow's github.repository context), or
 
 ## Canonical PKG and Cryptify hosts
 
-Source of truth: `postguard-js/scripts/smoke.mjs` and the `postguard-js/examples/pg-{node,dotnet,sveltekit}` configs.
+Source of truth: the `postguard-js/examples/pg-{node,dotnet,sveltekit}` configs.
 
 | Environment | PKG | Cryptify |
 |---|---|---|
