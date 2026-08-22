@@ -32,8 +32,53 @@ const DELETED_SECTIONS = [
 ];
 
 // Compared on letters and digits alone, so case, punctuation and heading level
-// cannot smuggle a section back in.
+// cannot smuggle a section back in. A reworded title that drops the section's
+// own words ("Style guide") is not caught, and the byte cap is what holds then.
 const normalise = (heading) => heading.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+
+// A "# ..." line inside a fenced block is a shell comment or a diff marker, not
+// a heading, and reporting one sends the reader looking for a section that is
+// not there. Fences are matched on their own opening run so an inner fence of a
+// different character or length does not close the block early.
+function withoutFencedBlocks(body) {
+  const lines = body.split("\n");
+  const kept = [];
+  let fence = null;
+  for (const line of lines) {
+    const open = /^ {0,3}(`{3,}|~{3,})/.exec(line);
+    if (fence) {
+      if (open && open[1][0] === fence[0] && open[1].length >= fence.length) fence = null;
+      kept.push("");
+      continue;
+    }
+    if (open) {
+      fence = open[1];
+      kept.push("");
+      continue;
+    }
+    kept.push(line);
+  }
+  return kept.join("\n");
+}
+
+// Setext headings are the other half of the syntax: an h1 or h2 written as the
+// text with "===" or "---" under it. They are as much a restored section as the
+// ATX form, and a gate that only knows "##" reads one as ordinary prose.
+function headingsIn(body) {
+  const scannable = withoutFencedBlocks(body);
+  const found = [...scannable.matchAll(/^#{1,6}\s+(.+)$/gm)].map(([, text]) => text);
+
+  const lines = scannable.split("\n");
+  for (let i = 1; i < lines.length; i++) {
+    if (!/^ {0,3}(=+|-+)\s*$/.test(lines[i])) continue;
+    const text = lines[i - 1].trim();
+    // An underline needs text above it; a "---" over a blank line is a thematic
+    // break or the close of a front-matter block, not a heading.
+    if (text !== "" && !/^ {0,3}#/.test(text)) found.push(text);
+  }
+
+  return found.map((text) => ({ text: text.trim(), normalised: normalise(text) }));
+}
 
 export function problemsFor(body) {
   const problems = [];
@@ -46,10 +91,7 @@ export function problemsFor(body) {
     );
   }
 
-  const headings = [...body.matchAll(/^#{1,6}\s+(.+)$/gm)].map(([, text]) => ({
-    text: text.trim(),
-    normalised: normalise(text),
-  }));
+  const headings = headingsIn(body);
 
   for (const { stem, went } of DELETED_SECTIONS) {
     const hit = headings.find((heading) => heading.normalised.includes(stem));

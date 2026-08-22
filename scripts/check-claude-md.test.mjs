@@ -35,8 +35,9 @@ test("a file over the cap fails on its size", () => {
 });
 
 // The gate used to compare headings with an exact, case-sensitive string match
-// at levels 2-6 only, so every retitling of a deleted section below passed it
-// and the byte cap was the only thing left standing.
+// at levels 2-6 only. Three of the headings below are a cut section's original
+// title and were caught even then; the other seven walked past it, leaving the
+// byte cap as the only thing standing. Reverting the matcher turns 7 of 13 red.
 for (const heading of [
   "## Writing Style Rules",
   "## Writing style",
@@ -64,4 +65,45 @@ Code snippets are copied out of those repos and pinned to a commit hash. The
 writing style rules and the agent notes are on the repo's own page.
 `;
   assert.deepEqual(problemsFor(body), []);
+});
+
+// A "#" line inside a fence is a shell comment, and the gate used to report it
+// as a heading -- an error naming a section the file does not have.
+test("a fenced block whose text looks like a heading is not a problem", () => {
+  const body = `${ORIENTATION}
+\`\`\`bash
+# Code snippets are pinned
+npm run check:links
+\`\`\`
+`;
+  assert.deepEqual(problemsFor(body), []);
+});
+
+test("a fence closes only on its own character and length", () => {
+  const body = `${ORIENTATION}
+~~~~
+## Writing style
+\`\`\`
+~~~
+still inside the block
+~~~~
+`;
+  assert.deepEqual(problemsFor(body), []);
+});
+
+// The other half of the heading syntax: a gate that only reads "##" takes a
+// setext h2 for prose and lets the section back in under it.
+for (const [label, underline] of [
+  ["h1", "============="],
+  ["h2", "-------------"],
+]) {
+  test(`a restored section as a setext ${label} fails on the heading`, () => {
+    const problems = problemsFor(`${ORIENTATION}\nCode snippets\n${underline}\n\nthe corpus, again.\n`);
+    assert.equal(problems.length, 1, `expected exactly one problem, got ${problems.join("; ")}`);
+    assert.match(problems[0], /heading again/);
+  });
+}
+
+test("a thematic break over a blank line is not a heading", () => {
+  assert.deepEqual(problemsFor(`${ORIENTATION}\n---\n\nplain prose.\n`), []);
 });
