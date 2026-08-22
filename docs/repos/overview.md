@@ -55,6 +55,12 @@ In the [postguard-js](https://github.com/encryption4all/postguard-js) workspace 
 | [pg-dotnet](/repos/pg-dotnet) | C# | .NET console app using `E4A.PostGuard` |
 | [pg-manual](/repos/pg-manual) | JavaScript | Browser example using `@e4a/pg-wasm` directly (no SDK) |
 
+## Documentation
+
+| Repository | Language | Description |
+|---|---|---|
+| [postguard-docs](/repos/postguard-docs) | VitePress | This site. Guides, SDK reference, and a page per repository |
+
 ## Dependency Graph
 
 The projects depend on each other roughly as follows. Names in parentheses are workspace members rather than separate repositories.

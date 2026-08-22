@@ -98,6 +98,13 @@ export default withMermaid(defineConfig({
               { text: 'pg-manual', link: '/repos/pg-manual' },
             ],
           },
+          {
+            text: 'Documentation',
+            collapsed: false,
+            items: [
+              { text: 'postguard-docs', link: '/repos/postguard-docs' },
+            ],
+          },
         ],
       },
     ],

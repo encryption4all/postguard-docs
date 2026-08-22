@@ -3,9 +3,9 @@
 //
 // Docs snippets carry a source link pinned to a full commit hash, e.g.
 //   https://github.com/<owner>/<repo>/blob/<hash>/<path>#L20-L31
-// (see CLAUDE.md). This script checks each such link exists via the GitHub
-// contents API with ref=<hash>. It is an HTTP existence check only: it does
-// not compare line ranges or snippet content against the file.
+// (see docs/repos/postguard-docs.md). This script checks each such link exists
+// via the GitHub contents API with ref=<hash>. It is an HTTP existence check
+// only: it does not compare line ranges or snippet content against the file.
 //
 // Set GITHUB_TOKEN or GH_TOKEN in the environment so private repos resolve
 // and the unauthenticated rate limit (60 req/hour) is lifted.
