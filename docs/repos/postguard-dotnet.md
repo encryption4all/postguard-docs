@@ -93,11 +93,31 @@ cd ../postguard/pg-ffi
 
 This compiles the Rust FFI crate and copies the native library to `src/runtimes/`.
 
+CI and the NuGet publish do not build the crate. They download pre-built binaries from the release pinned in `.github/pg-ffi-version`, a one-line file holding the exact `encryption4all/postguard` release tag both workflows pass to `gh release download`. Bump that file to move to a newer release, and check out the same tag when you want a local build of the binaries that ship.
+
 ### Build the .NET solution
 
 ```bash
 dotnet build E4A.PostGuard.slnx
 ```
+
+### Testing
+
+```bash
+dotnet test E4A.PostGuard.slnx
+```
+
+The solution multi-targets `net8.0` and `net10.0`, so a plain `dotnet test` needs both runtimes installed. Pass `--framework net10.0` to run against one of them. CI exercises both.
+
+### Public API surface
+
+`src/PublicAPI.Shipped.txt` and `src/PublicAPI.Unshipped.txt` list every public member of `E4A.PostGuard`. Microsoft.CodeAnalysis.PublicApiAnalyzers checks them during `dotnet build`, so changing the public surface without updating the files fails the build. There is no separate CI step. Severity is raised through `<WarningsAsErrors>` in `src/E4A.PostGuard.csproj` rather than `.editorconfig`, because path-based `.editorconfig` severity does not reach the analyzer's additional files.
+
+Add a new member to `PublicAPI.Unshipped.txt`. Record a removal in the same file as `*REMOVED*` followed by the exact line from the shipped file. To get a line in the right format, build and copy the signature out of the `RS0016` message, which prints it as `Namespace.Type.Member(args) -> ret`. IDEs offer the same text as a code fix on the diagnostic.
+
+Both target frameworks produce the same surface today, since `src/` has no `#if`, so one pair of files covers both. A member that becomes framework-conditional would need the files split per framework.
+
+At release time, move the `PublicAPI.Unshipped.txt` entries into `PublicAPI.Shipped.txt`, applying `*REMOVED*` lines as deletions, and leave the unshipped file with only its `#nullable enable` header. Release-please does not do this.
 
 ### Run the example
 
@@ -107,7 +127,7 @@ See [postguard-examples/pg-dotnet](https://github.com/encryption4all/postguard-e
 
 This repository uses [Release-please](https://github.com/googleapis/release-please) for automated versioning. When changes are merged to `main`, Release-please creates a release PR. Merging that PR triggers:
 
-1. Download of `pg-ffi` native libraries from the [postguard](https://github.com/encryption4all/postguard) releases (linux-x64, linux-arm64, osx-x64, osx-arm64, win-x64)
+1. Download of `pg-ffi` native libraries from the [postguard](https://github.com/encryption4all/postguard) release pinned in `.github/pg-ffi-version` (linux-x64, linux-arm64, osx-x64, osx-arm64, win-x64)
 2. NuGet package publishing via trusted OIDC publishing
 
 ## CI/CD
