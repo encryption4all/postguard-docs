@@ -24,6 +24,7 @@ The main PostGuard codebase.
 | [postguard](/repos/postguard) | Rust | Core library, PKG server, WASM bindings, CLI, FFI bindings, and the Cryptify backend |
 | [cryptify](/repos/cryptify) | Rust | File encryption and sharing service. The source now lives in `cryptify/` inside the postguard workspace; this repository still builds and publishes the container image |
 | [postguard-business](/repos/postguard-business) | SvelteKit | Business portal for organization and API key management |
+| [pdf-signature](/repos/pdf-signature) | Rust, TypeScript | Signing service built on the same identity layer. A fork of cryptify with its own frontend |
 
 ## Applications
 

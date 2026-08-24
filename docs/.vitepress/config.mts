@@ -76,6 +76,7 @@ export default withMermaid(defineConfig({
               { text: 'postguard-website', link: '/repos/postguard-website' },
               { text: 'postguard-business', link: '/repos/postguard-business' },
               { text: 'cryptify', link: '/repos/cryptify' },
+              { text: 'pdf-signature', link: '/repos/pdf-signature' },
               { text: 'postguard-tb-addon', link: '/repos/postguard-tb-addon' },
               { text: 'postguard-outlook-addon', link: '/repos/postguard-outlook-addon' },
             ],
